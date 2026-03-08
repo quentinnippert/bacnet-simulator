@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Scenarios — BACnet Lab{% endblock %}
+{% block content %}
+<h1>Scenarios</h1>
+<div hx-get="/ui/partials/scenarios" hx-trigger="every 3s" hx-swap="innerHTML">
+    {% if not scenarios %}
+    <p>No scenarios registered.</p>
+    {% endif %}
+    {% for scenario in scenarios %}
+    <article>
+        <header>
+            <strong>{{ scenario.name }}</strong>
+            <span class="status-badge status-{{ scenario.status.value }}">{{ scenario.status.value }}</span>
+        </header>
+        <p>{{ scenario.description }}</p>
+        <footer>
+            {% if scenario.status.value == 'running' %}
+            <button hx-post="/api/scenarios/{{ scenario.id }}/stop" hx-swap="none" class="secondary">Stop</button>
+            {% else %}
+            <button hx-post="/api/scenarios/{{ scenario.id }}/start" hx-swap="none">Start</button>
+            {% endif %}
+        </footer>
+    </article>
+    {% endfor %}
+</div>
+{% endblock %}

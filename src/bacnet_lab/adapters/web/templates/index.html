@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — BACnet Lab{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="grid">
+    <article>
+        <header>Devices</header>
+        <p><strong>{{ devices|length }}</strong> devices online</p>
+        <footer><a href="/ui/devices" role="button" class="outline">View Devices</a></footer>
+    </article>
+    <article>
+        <header>Scenarios</header>
+        <p><strong>{{ active_scenarios }}</strong> / {{ scenarios_count }} running</p>
+        <footer><a href="/ui/scenarios" role="button" class="outline">View Scenarios</a></footer>
+    </article>
+    <article>
+        <header>Alarms</header>
+        <p><strong>{{ alarm_count }}</strong> active alarms</p>
+        <footer><a href="/ui/events" role="button" class="outline">View Events</a></footer>
+    </article>
+</div>
+
+<h2>Devices Overview</h2>
+<div hx-get="/ui/partials/device-cards" hx-trigger="every 5s" hx-swap="innerHTML">
+    {% for device in devices %}
+    <article>
+        <header>
+            <span>{{ device.name }}</span>
+            <span class="status-badge status-{{ device.status.value }}">{{ device.status.value }}</span>
+        </header>
+        <p>{{ device.description }}</p>
+        <small>ID: {{ device.device_id }} — {{ device.points|length }} points</small>
+        <footer>
+            <a href="/ui/devices/{{ device.device_id }}" role="button" class="outline secondary">Details</a>
+        </footer>
+    </article>
+    {% endfor %}
+</div>
+{% endblock %}

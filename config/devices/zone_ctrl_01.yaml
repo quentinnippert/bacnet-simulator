@@ -1,0 +1,51 @@
+device_id: 4001
+name: "ZC-01"
+description: "Zone Controller - Open Plan Area"
+points:
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "ZC-01/ZoneTemp"
+    description: "Zone average temperature"
+    present_value: 22.5
+    units: "degreesCelsius"
+    cov_increment: 0.3
+  - object_type: analogInput
+    object_instance: 2
+    object_name: "ZC-01/AirflowRate"
+    description: "Zone airflow rate"
+    present_value: 500.0
+    units: "cubicFeetPerMinute"
+    cov_increment: 10.0
+  - object_type: analogOutput
+    object_instance: 1
+    object_name: "ZC-01/DamperPosition"
+    description: "VAV damper position"
+    present_value: 65.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogOutput
+    object_instance: 2
+    object_name: "ZC-01/ReheatValve"
+    description: "Reheat valve position"
+    present_value: 0.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogValue
+    object_instance: 1
+    object_name: "ZC-01/ZoneTempSetpoint"
+    description: "Zone temperature setpoint"
+    present_value: 22.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: analogValue
+    object_instance: 2
+    object_name: "ZC-01/MinAirflow"
+    description: "Minimum airflow setpoint"
+    present_value: 200.0
+    units: "cubicFeetPerMinute"
+    cov_increment: 10.0
+  - object_type: binaryInput
+    object_instance: 1
+    object_name: "ZC-01/OccupancySensor"
+    description: "Zone occupancy"
+    present_value: true

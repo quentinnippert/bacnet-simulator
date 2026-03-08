@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Devices — BACnet Lab{% endblock %}
+{% block content %}
+<h1>Devices</h1>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Points</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in devices %}
+        <tr>
+            <td>{{ device.device_id }}</td>
+            <td><strong>{{ device.name }}</strong></td>
+            <td>{{ device.description }}</td>
+            <td><span class="status-badge status-{{ device.status.value }}">{{ device.status.value }}</span></td>
+            <td>{{ device.points|length }}</td>
+            <td><a href="/ui/devices/{{ device.device_id }}" role="button" class="outline small">View</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

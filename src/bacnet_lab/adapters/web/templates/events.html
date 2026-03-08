@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Events — BACnet Lab{% endblock %}
+{% block content %}
+<h1>Events & Alarms</h1>
+
+<h2>Active Alarms</h2>
+{% if not alarms %}
+<p>No alarms.</p>
+{% else %}
+<table>
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Device</th>
+            <th>Point</th>
+            <th>Severity</th>
+            <th>Message</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for alarm in alarms %}
+        <tr>
+            <td><small>{{ alarm.raised_at.strftime('%H:%M:%S') }}</small></td>
+            <td>{{ alarm.device_id }}</td>
+            <td>{{ alarm.point_name }}</td>
+            <td><span class="status-badge status-{{ 'error' if alarm.severity.value in ('high', 'critical') else 'online' }}">{{ alarm.severity.value }}</span></td>
+            <td>{{ alarm.message }}</td>
+            <td>{{ 'Active' if alarm.is_active else 'Cleared' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<h2>Recent Events</h2>
+<div hx-get="/ui/partials/events" hx-trigger="every 5s" hx-swap="innerHTML">
+    {% if not events %}
+    <p>No events yet.</p>
+    {% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Delivered</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td><small>{{ event.timestamp.strftime('%H:%M:%S') }}</small></td>
+                <td><code>{{ event.event_type.value }}</code></td>
+                <td>{{ 'Yes' if event.delivered else 'No' }}</td>
+                <td><small>{{ event.payload|string|truncate(80) }}</small></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

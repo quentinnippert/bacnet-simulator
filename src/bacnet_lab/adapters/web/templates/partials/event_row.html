@@ -1,0 +1,24 @@
+{% if not events %}
+<p>No events yet.</p>
+{% else %}
+<table>
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Delivered</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for event in events %}
+        <tr>
+            <td><small>{{ event.timestamp.strftime('%H:%M:%S') }}</small></td>
+            <td><code>{{ event.event_type.value }}</code></td>
+            <td>{{ 'Yes' if event.delivered else 'No' }}</td>
+            <td><small>{{ event.payload|string|truncate(80) }}</small></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}

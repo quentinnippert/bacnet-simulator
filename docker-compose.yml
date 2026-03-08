@@ -1,0 +1,9 @@
+services:
+  bacnet-lab:
+    build: .
+    network_mode: host
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    restart: unless-stopped

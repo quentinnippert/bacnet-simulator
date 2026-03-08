@@ -1,0 +1,23 @@
+device_id: 5002
+name: "CO2-01"
+description: "CO2 Sensor - Conference Room"
+points:
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "CO2-01/CO2Level"
+    description: "CO2 concentration"
+    present_value: 450.0
+    units: "partsPerMillion"
+    cov_increment: 25.0
+  - object_type: analogValue
+    object_instance: 1
+    object_name: "CO2-01/CO2Setpoint"
+    description: "CO2 setpoint for demand ventilation"
+    present_value: 800.0
+    units: "partsPerMillion"
+    cov_increment: 25.0
+  - object_type: binaryValue
+    object_instance: 1
+    object_name: "CO2-01/HighCO2Alarm"
+    description: "High CO2 alarm"
+    present_value: false

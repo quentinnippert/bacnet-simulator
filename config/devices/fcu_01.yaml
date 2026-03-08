@@ -1,0 +1,49 @@
+device_id: 2001
+name: "FCU-01"
+description: "Fan Coil Unit - Zone 1 (Office North)"
+points:
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "FCU-01/RoomTemp"
+    description: "Room temperature"
+    present_value: 23.0
+    units: "degreesCelsius"
+    cov_increment: 0.3
+  - object_type: analogOutput
+    object_instance: 1
+    object_name: "FCU-01/CoolingValve"
+    description: "Cooling valve position"
+    present_value: 30.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogOutput
+    object_instance: 2
+    object_name: "FCU-01/HeatingValve"
+    description: "Heating valve position"
+    present_value: 0.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogOutput
+    object_instance: 3
+    object_name: "FCU-01/FanSpeed"
+    description: "Fan speed"
+    present_value: 50.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogValue
+    object_instance: 1
+    object_name: "FCU-01/RoomTempSetpoint"
+    description: "Room temperature setpoint"
+    present_value: 22.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: binaryInput
+    object_instance: 1
+    object_name: "FCU-01/OccupancySensor"
+    description: "Room occupancy"
+    present_value: true
+  - object_type: binaryOutput
+    object_instance: 1
+    object_name: "FCU-01/FanEnable"
+    description: "Fan enable command"
+    present_value: true

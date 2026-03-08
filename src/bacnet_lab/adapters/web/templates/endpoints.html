@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Endpoints — BACnet Lab{% endblock %}
+{% block content %}
+<h1>Webhook Endpoints</h1>
+
+<article>
+    <header>Add Endpoint</header>
+    <form hx-post="/api/endpoints"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful) location.reload()">
+        <label for="url">Webhook URL</label>
+        <input type="url" id="url" name="url" placeholder="https://example.com/webhook" required>
+        <button type="submit">Create Endpoint</button>
+    </form>
+</article>
+
+{% if not endpoints %}
+<p>No webhook endpoints configured.</p>
+{% endif %}
+
+{% for ep in endpoints %}
+<article>
+    <header>
+        <strong>{{ ep.url }}</strong>
+        {% if ep.enabled %}
+        <span class="status-badge status-online">enabled</span>
+        {% else %}
+        <span class="status-badge status-offline">disabled</span>
+        {% endif %}
+    </header>
+    <p>
+        <small>ID: {{ ep.id[:8] }}... — Secret: {{ ep.secret[:8] }}...</small><br>
+        <small>Event types: {{ ep.event_types|join(', ') if ep.event_types else 'all' }}</small><br>
+        <small>Failures: {{ ep.failure_count }}</small>
+    </p>
+    <footer>
+        <button hx-post="/api/endpoints/{{ ep.id }}/test" hx-swap="none" class="outline">Test</button>
+        <button hx-delete="/api/endpoints/{{ ep.id }}" hx-swap="none"
+                hx-on::after-request="if(event.detail.successful) location.reload()"
+                class="secondary outline">Delete</button>
+    </footer>
+</article>
+{% endfor %}
+{% endblock %}

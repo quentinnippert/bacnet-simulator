@@ -1,0 +1,24 @@
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Instance</th>
+            <th>Value</th>
+            <th>Units</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for point in device.points %}
+        <tr>
+            <td><strong>{{ point.object_name }}</strong></td>
+            <td><code>{{ point.object_type.value }}</code></td>
+            <td>{{ point.object_instance }}</td>
+            <td><strong>{{ point.present_value }}</strong></td>
+            <td>{{ point.units }}</td>
+            <td>{{ point.description }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

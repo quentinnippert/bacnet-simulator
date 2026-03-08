@@ -1,0 +1,18 @@
+device_id: 5001
+name: "OAT-01"
+description: "Outdoor Air Temperature Sensor"
+points:
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "OAT-01/OutdoorTemp"
+    description: "Outdoor air temperature"
+    present_value: 15.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: analogInput
+    object_instance: 2
+    object_name: "OAT-01/OutdoorHumidity"
+    description: "Outdoor relative humidity"
+    present_value: 60.0
+    units: "percentRelativeHumidity"
+    cov_increment: 2.0

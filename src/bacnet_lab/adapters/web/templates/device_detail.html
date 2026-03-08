@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ device.name }} — BACnet Lab{% endblock %}
+{% block content %}
+<hgroup>
+    <h1>{{ device.name }}</h1>
+    <p>{{ device.description }} — Device ID: {{ device.device_id }}
+        <span class="status-badge status-{{ device.status.value }}">{{ device.status.value }}</span>
+    </p>
+</hgroup>
+
+<h2>Points</h2>
+<div hx-get="/ui/partials/points/{{ device.device_id }}" hx-trigger="every 3s" hx-swap="innerHTML">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Instance</th>
+                <th>Value</th>
+                <th>Units</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for point in device.points %}
+            <tr>
+                <td><strong>{{ point.object_name }}</strong></td>
+                <td><code>{{ point.object_type.value }}</code></td>
+                <td>{{ point.object_instance }}</td>
+                <td>
+                    {% if 'output' in point.object_type.value.lower() or 'value' in point.object_type.value.lower() %}
+                    <form hx-put="/api/devices/{{ device.device_id }}/points"
+                          hx-swap="none"
+                          hx-headers='{"Content-Type": "application/json"}'
+                          hx-vals='js:{"point_name": "{{ point.object_name }}", "value": parseFloat(event.target.querySelector("[name=value]").value)}'
+                          style="display:inline">
+                        <input type="text" name="value" value="{{ point.present_value }}" style="width:100px;display:inline;padding:4px 8px;margin:0">
+                    </form>
+                    {% else %}
+                    <strong>{{ point.present_value }}</strong>
+                    {% endif %}
+                </td>
+                <td>{{ point.units }}</td>
+                <td>{{ point.description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p><a href="/ui/devices">&larr; Back to Devices</a></p>
+{% endblock %}

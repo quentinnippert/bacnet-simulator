@@ -1,0 +1,42 @@
+device_id: 3001
+name: "TSTAT-01"
+description: "Thermostat - Lobby"
+points:
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "TSTAT-01/SpaceTemp"
+    description: "Space temperature"
+    present_value: 22.0
+    units: "degreesCelsius"
+    cov_increment: 0.2
+  - object_type: analogInput
+    object_instance: 2
+    object_name: "TSTAT-01/SpaceHumidity"
+    description: "Space relative humidity"
+    present_value: 45.0
+    units: "percentRelativeHumidity"
+    cov_increment: 1.0
+  - object_type: analogValue
+    object_instance: 1
+    object_name: "TSTAT-01/CoolingSetpoint"
+    description: "Cooling setpoint"
+    present_value: 24.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: analogValue
+    object_instance: 2
+    object_name: "TSTAT-01/HeatingSetpoint"
+    description: "Heating setpoint"
+    present_value: 21.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: multiStateValue
+    object_instance: 1
+    object_name: "TSTAT-01/Mode"
+    description: "Operating mode (1=Off, 2=Cool, 3=Heat, 4=Auto)"
+    present_value: 4
+  - object_type: binaryInput
+    object_instance: 1
+    object_name: "TSTAT-01/Occupancy"
+    description: "Space occupancy"
+    present_value: true
