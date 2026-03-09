@@ -81,6 +81,103 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 This is suitable for developing against the API and UI. For full BACnet network testing, use a Linux machine or VM.
 
+## Deploy on a DigitalOcean Droplet
+
+### 1. Create the Droplet
+
+Create an **Ubuntu 22.04+** droplet (the $6/mo plan with 1 vCPU / 1 GB RAM is sufficient). Make sure you can SSH into it.
+
+### 2. Install Docker
+
+```bash
+ssh root@<DROPLET_IP>
+
+apt update && apt upgrade -y
+curl -fsSL https://get.docker.com | sh
+
+# Verify
+docker --version
+docker compose version
+```
+
+### 3. Configure the Firewall
+
+```bash
+ufw allow 22/tcp              # SSH
+ufw allow 8080/tcp             # BACnet Lab web/API
+ufw allow 47808:47815/udp      # BACnet UDP (7 devices)
+ufw enable
+```
+
+### 4. Clone and Configure
+
+```bash
+cd /opt
+git clone https://github.com/YOUR_USERNAME/bacnet-lab.git
+cd bacnet-lab
+
+cp .env.example .env
+nano .env
+```
+
+Set a strong password in `.env`:
+
+```
+BACNET_LAB_AUTH_USERNAME=admin
+BACNET_LAB_AUTH_PASSWORD=<YOUR_STRONG_PASSWORD>
+```
+
+Create the data directory for SQLite persistence:
+
+```bash
+mkdir -p data
+```
+
+### 5. Start
+
+```bash
+docker compose up -d --build
+```
+
+Verify:
+
+```bash
+docker compose logs -f
+```
+
+You should see `BACnet Lab ready on http://0.0.0.0:8080` and all 7 devices starting.
+
+### 6. Access
+
+Open `http://<DROPLET_IP>:8080/ui` in your browser. A login popup appears (HTTP Basic Auth). Enter the credentials from your `.env`.
+
+Test from the command line:
+
+```bash
+curl -u admin:<YOUR_PASSWORD> http://<DROPLET_IP>:8080/api/health
+```
+
+### Updating
+
+When you push new code to the repository:
+
+```bash
+ssh root@<DROPLET_IP>
+cd /opt/bacnet-lab
+git pull
+docker compose up -d --build
+```
+
+### Useful Commands
+
+| Action | Command |
+|---|---|
+| View logs | `docker compose logs -f` |
+| Restart | `docker compose restart` |
+| Stop | `docker compose down` |
+| Rebuild | `docker compose up -d --build --force-recreate` |
+| Change password | Edit `.env` then `docker compose restart` |
+
 ## First Steps
 
 ### 1. Open the Dashboard
