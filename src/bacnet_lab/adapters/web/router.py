@@ -23,9 +23,9 @@ async def index(request: Request) -> HTMLResponse:
     active_scenarios = sum(1 for s in scenarios if s.status == ScenarioStatus.RUNNING)
     active_alarms = await container.alarm_repo.get_active()
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "devices": devices,
             "scenarios_count": len(scenarios),
             "active_scenarios": active_scenarios,
@@ -39,7 +39,7 @@ async def devices_page(request: Request) -> HTMLResponse:
     container = get_container()
     devices = await container.device_service.list_devices()
     return templates.TemplateResponse(
-        "devices.html", {"request": request, "devices": devices}
+        request=request, name="devices.html", context={"devices": devices}
     )
 
 
@@ -50,7 +50,7 @@ async def device_detail(request: Request, device_id: int) -> HTMLResponse:
     if not device:
         return HTMLResponse(content="Device not found", status_code=404)
     return templates.TemplateResponse(
-        "device_detail.html", {"request": request, "device": device}
+        request=request, name="device_detail.html", context={"device": device}
     )
 
 
@@ -59,7 +59,7 @@ async def scenarios_page(request: Request) -> HTMLResponse:
     container = get_container()
     scenarios = container.scenario_service.list_scenarios()
     return templates.TemplateResponse(
-        "scenarios.html", {"request": request, "scenarios": scenarios}
+        request=request, name="scenarios.html", context={"scenarios": scenarios}
     )
 
 
@@ -68,7 +68,7 @@ async def endpoints_page(request: Request) -> HTMLResponse:
     container = get_container()
     endpoints = await container.endpoint_service.list_endpoints()
     return templates.TemplateResponse(
-        "endpoints.html", {"request": request, "endpoints": endpoints}
+        request=request, name="endpoints.html", context={"endpoints": endpoints}
     )
 
 
@@ -78,7 +78,7 @@ async def events_page(request: Request) -> HTMLResponse:
     events = await container.event_service.list_recent_events(100)
     alarms = await container.alarm_repo.list_recent(50)
     return templates.TemplateResponse(
-        "events.html", {"request": request, "events": events, "alarms": alarms}
+        request=request, name="events.html", context={"events": events, "alarms": alarms}
     )
 
 
@@ -89,7 +89,7 @@ async def partial_device_cards(request: Request) -> HTMLResponse:
     container = get_container()
     devices = container.device_service.get_all_in_memory_devices()
     return templates.TemplateResponse(
-        "partials/device_card.html", {"request": request, "devices": devices}
+        request=request, name="partials/device_card.html", context={"devices": devices}
     )
 
 
@@ -100,7 +100,7 @@ async def partial_point_rows(request: Request, device_id: int) -> HTMLResponse:
     if not device:
         return HTMLResponse(content="", status_code=404)
     return templates.TemplateResponse(
-        "partials/point_row.html", {"request": request, "device": device}
+        request=request, name="partials/point_row.html", context={"device": device}
     )
 
 
@@ -109,7 +109,7 @@ async def partial_scenario_cards(request: Request) -> HTMLResponse:
     container = get_container()
     scenarios = container.scenario_service.list_scenarios()
     return templates.TemplateResponse(
-        "partials/scenario_card.html", {"request": request, "scenarios": scenarios}
+        request=request, name="partials/scenario_card.html", context={"scenarios": scenarios}
     )
 
 
@@ -118,5 +118,5 @@ async def partial_event_rows(request: Request) -> HTMLResponse:
     container = get_container()
     events = await container.event_service.list_recent_events(50)
     return templates.TemplateResponse(
-        "partials/event_row.html", {"request": request, "events": events}
+        request=request, name="partials/event_row.html", context={"events": events}
     )

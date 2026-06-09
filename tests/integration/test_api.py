@@ -1,4 +1,5 @@
-import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 import os
 import tempfile
 
@@ -25,7 +26,7 @@ from bacnet_lab.application.scenario_service import ScenarioService
 from bacnet_lab.application.telemetry_service import TelemetryService
 from bacnet_lab.bootstrap import Container
 from bacnet_lab.domain.enums import PointType
-from bacnet_lab.domain.models.device import Device, Point
+from bacnet_lab.domain.models.device import Device
 from bacnet_lab.domain.value_objects import PointValue
 from bacnet_lab.infrastructure.config import AppSettings
 from bacnet_lab.ports.device_network import DeviceNetworkPort
@@ -66,58 +67,73 @@ class FakeNetwork(DeviceNetworkPort):
         return 0
 
 
-@pytest.fixture
-async def client():
+@asynccontextmanager
+async def make_test_client(
+    auth_username: str = "", auth_password: str = ""
+) -> AsyncIterator[AsyncClient]:
     fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
-    await run_migrations(db_path)
+    try:
+        await run_migrations(db_path)
 
-    settings = AppSettings(db_path=db_path)
-    event_publisher = InProcessEventPublisher()
-    network = FakeNetwork()
-    device_repo = SqliteDeviceRepository(db_path)
-    endpoint_repo = SqliteEndpointRepository(db_path)
-    event_log_repo = SqliteEventLogRepository(db_path)
-    alarm_repo = SqliteAlarmRepository(db_path)
-    webhook_delivery = WebhookDeliveryAdapter()
+        settings = AppSettings(db_path=db_path)
+        event_publisher = InProcessEventPublisher()
+        network = FakeNetwork()
+        device_repo = SqliteDeviceRepository(db_path)
+        endpoint_repo = SqliteEndpointRepository(db_path)
+        event_log_repo = SqliteEventLogRepository(db_path)
+        alarm_repo = SqliteAlarmRepository(db_path)
+        webhook_delivery = WebhookDeliveryAdapter()
 
-    device_service = DeviceService(
-        device_repo=device_repo, network=network, event_publisher=event_publisher
-    )
-    scenario_registry = ScenarioRegistry()
-    scenario_service = ScenarioService(runner=scenario_registry)
-    endpoint_service = EndpointService(repo=endpoint_repo, delivery=webhook_delivery)
-    event_service = EventService(
-        event_publisher=event_publisher,
-        event_log_repo=event_log_repo,
-        endpoint_repo=endpoint_repo,
-        delivery=webhook_delivery,
-    )
-    telemetry_service = TelemetryService(event_publisher=event_publisher)
+        device_service = DeviceService(
+            device_repo=device_repo, network=network, event_publisher=event_publisher
+        )
+        scenario_registry = ScenarioRegistry()
+        scenario_service = ScenarioService(runner=scenario_registry)
+        endpoint_service = EndpointService(repo=endpoint_repo, delivery=webhook_delivery)
+        event_service = EventService(
+            event_publisher=event_publisher,
+            event_log_repo=event_log_repo,
+            endpoint_repo=endpoint_repo,
+            delivery=webhook_delivery,
+        )
+        telemetry_service = TelemetryService(event_publisher=event_publisher)
 
-    # Load test devices
-    devices = load_all_devices("config/devices")
-    await device_service.initialize_devices(devices)
+        # Load test devices
+        devices = load_all_devices("config/devices")
+        await device_service.initialize_devices(devices)
 
-    container = Container(
-        settings=settings,
-        device_service=device_service,
-        scenario_service=scenario_service,
-        endpoint_service=endpoint_service,
-        event_service=event_service,
-        telemetry_service=telemetry_service,
-        alarm_repo=alarm_repo,
-        engine=None,
-        event_publisher=event_publisher,
-    )
-    set_container(container)
+        container = Container(
+            settings=settings,
+            device_service=device_service,
+            scenario_service=scenario_service,
+            endpoint_service=endpoint_service,
+            event_service=event_service,
+            telemetry_service=telemetry_service,
+            alarm_repo=alarm_repo,
+            engine=None,
+            event_publisher=event_publisher,
+        )
+        set_container(container)
 
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        app = create_app(auth_username=auth_username, auth_password=auth_password)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
+    finally:
+        os.unlink(db_path)
+
+
+@pytest.fixture
+async def client():
+    async with make_test_client() as ac:
         yield ac
 
-    os.unlink(db_path)
+
+@pytest.fixture
+async def auth_client():
+    async with make_test_client(auth_username="admin", auth_password="secret") as ac:
+        yield ac
 
 
 @pytest.mark.asyncio
@@ -182,3 +198,57 @@ async def test_list_events(client):
 async def test_list_alarms(client):
     resp = await client.get("/api/alarms")
     assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("path", "expected_text"),
+    [
+        ("/ui", "Devices Overview"),
+        ("/ui/devices", "AHU-01"),
+        ("/ui/endpoints", "Webhook Endpoints"),
+        ("/ui/partials/device-cards", "AHU-01"),
+        ("/ui/partials/points/1001", "AHU-01/CoolingValve"),
+    ],
+)
+async def test_web_ui_pages_render(client, path, expected_text):
+    resp = await client.get(path)
+
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers["content-type"]
+    assert expected_text in resp.text
+
+
+@pytest.mark.asyncio
+async def test_basic_auth_protects_web_ui(auth_client):
+    resp = await auth_client.get("/ui")
+
+    assert resp.status_code == 401
+    assert resp.headers["www-authenticate"] == 'Basic realm="BACnet Lab"'
+
+    resp = await auth_client.get("/ui", auth=("admin", "secret"))
+
+    assert resp.status_code == 200
+    assert "Devices Overview" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_delete_endpoint_returns_empty_204(client):
+    created = await client.post(
+        "/api/endpoints",
+        json={
+            "url": "https://example.com/webhook",
+            "event_types": ["point_value_changed"],
+        },
+    )
+    assert created.status_code == 201
+
+    endpoint_id = created.json()["id"]
+    deleted = await client.delete(f"/api/endpoints/{endpoint_id}")
+
+    assert deleted.status_code == 204
+    assert deleted.content == b""
+    assert deleted.headers.get("content-type") is None
+
+    remaining = await client.get("/api/endpoints")
+    assert all(endpoint["id"] != endpoint_id for endpoint in remaining.json())

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from bacnet_lab.adapters.http.dependencies import get_container
 from bacnet_lab.adapters.http.schemas import EndpointCreateRequest, EndpointResponse
@@ -39,10 +39,11 @@ async def create_endpoint(req: EndpointCreateRequest) -> EndpointResponse:
     )
 
 
-@router.delete("/{endpoint_id}", status_code=204)
-async def delete_endpoint(endpoint_id: str) -> None:
+@router.delete("/{endpoint_id}", status_code=204, response_class=Response)
+async def delete_endpoint(endpoint_id: str) -> Response:
     container = get_container()
     await container.endpoint_service.delete_endpoint(endpoint_id)
+    return Response(status_code=204)
 
 
 @router.post("/{endpoint_id}/test")
