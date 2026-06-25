@@ -1,18 +1,28 @@
-# BACnet Network Simulator
+# BACnet Simulator
 
-**Open-source BACnet/IP simulator** with 7 virtual HVAC devices, a REST API, real-time web dashboard, and Docker Compose deployment. No physical hardware required.
+**Open-source BACnet/IP simulator for developers testing BACnet clients, BMS integrations, SCADA connectors, and HVAC automation software without physical devices.**
 
-Built for developers building BMS integrations, SCADA connectors, or building analytics platforms who need a realistic BACnet test network running in seconds.
+Run a realistic BACnet test network in seconds with Docker: 7 virtual HVAC devices, ~50 BACnet points, REST API control, web dashboard, scenarios, alarms, and webhooks.
 
-## Why BACnet Lab?
+Use it to:
 
-Testing BACnet integrations typically requires expensive physical hardware and complex network setups. BACnet Lab gives you a fully functional BACnet/IP network on your development machine:
+- test BACnet discovery, reads, writes, and device availability
+- simulate HVAC equipment such as AHUs, FCUs, thermostats, zone controllers, CO2 sensors, and outdoor temperature sensors
+- build and validate BMS, SCADA, building analytics, or digital twin integrations
+- run repeatable BACnet integration tests in development or CI/CD
 
-- **Instant setup** — `docker compose up` and you have 7 BACnet devices with ~50 points
-- **Realistic behavior** — dynamic HVAC scenarios simulate temperature variations, alarm conditions, and device failures
-- **API-first** — REST API for programmatic control, perfect for CI/CD pipelines and automated testing
-- **Event-driven** — HMAC-signed webhooks push real-time events to your systems
-- **Observable** — web dashboard shows live device state, events, and alarms
+## Who is this for?
+
+BACnet Simulator is built for developers working on:
+
+- BACnet client libraries
+- BMS / Building Management System integrations
+- SCADA connectors
+- building analytics platforms
+- HVAC automation software
+- digital twin platforms for buildings
+- industrial IoT gateways
+- CI/CD tests requiring virtual BACnet/IP devices
 
 ## Features
 
@@ -33,8 +43,8 @@ Testing BACnet integrations typically requires expensive physical hardware and c
 ### Docker (recommended)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/bacnet-lab.git
-cd bacnet-lab
+git clone https://github.com/quentinnippert/bacnet-simulator.git
+cd bacnet-simulator
 docker compose up -d --build
 ```
 
