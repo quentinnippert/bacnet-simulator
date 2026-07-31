@@ -11,6 +11,24 @@ from bacnet_lab.ports.device_network import DeviceNetworkPort
 logger = logging.getLogger(__name__)
 
 
+def _remove_invalid_fd_bbmd_address(instance: object) -> None:
+    """Remove the malformed optional address BAC0 creates outside foreign mode."""
+    try:
+        application = instance.this_application.app
+        network_port = application.get_object_name("NetworkPort-1")
+    except AttributeError:
+        return
+
+    if network_port is None:
+        return
+
+    fd_bbmd_address = getattr(network_port, "fdBBMDAddress", None)
+    if fd_bbmd_address is None or getattr(fd_bbmd_address, "host", None) is not None:
+        return
+
+    del network_port.fdBBMDAddress
+
+
 class BAC0Engine(DeviceNetworkPort):
     """Manages one BAC0 lite instance per device on separate UDP ports.
 
@@ -47,6 +65,8 @@ class BAC0Engine(DeviceNetworkPort):
                 raise TimeoutError(
                     f"BAC0 instance for device {device.device_id} did not initialize within 5s"
                 )
+
+            _remove_invalid_fd_bbmd_address(instance)
 
             # Create local BACnet objects for each point
             for point in device.points:
