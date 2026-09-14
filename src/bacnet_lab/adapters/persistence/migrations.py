@@ -72,7 +72,54 @@ TABLES = [
 
 
 async def run_migrations(db_path: str) -> None:
+    """Migrate atomically; retain v1 data and reject unknown future schemas."""
+    import json
+    from pathlib import Path
+
+    from bacnet_lab.adapters.persistence.sqlite_repos import _parse_value
+
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(db_path) as db:
-        for table_sql in TABLES:
-            await db.execute(table_sql)
-        await db.commit()
+        await db.execute("PRAGMA journal_mode = WAL")
+        version = (await (await db.execute("PRAGMA user_version")).fetchone())[0]
+        if version > 2:
+            raise RuntimeError(f"Unsupported database schema version: {version}")
+        await db.execute("BEGIN IMMEDIATE")
+        try:
+            for table_sql in TABLES:
+                await db.execute(table_sql)
+            if version < 2:
+                columns = {
+                    row[1]
+                    for row in await (await db.execute("PRAGMA table_info(points)")).fetchall()
+                }
+                if "state_text" not in columns:
+                    await db.execute(
+                        "ALTER TABLE points ADD COLUMN state_text TEXT NOT NULL DEFAULT '[]'"
+                    )
+                rows = await (await db.execute("SELECT id, present_value FROM points")).fetchall()
+                for identifier, value in rows:
+                    await db.execute(
+                        "UPDATE points SET present_value=? WHERE id=?",
+                        (json.dumps(_parse_value(value)), identifier),
+                    )
+                await db.execute("""CREATE TABLE deliveries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                    endpoint_id TEXT NOT NULL REFERENCES endpoints(id) ON DELETE CASCADE,
+                    state TEXT NOT NULL DEFAULT 'pending',
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    next_attempt REAL NOT NULL DEFAULT 0,
+                    last_error TEXT,
+                    UNIQUE(event_id, endpoint_id)
+                )""")
+                await db.execute("CREATE INDEX events_timestamp ON events(timestamp)")
+                await db.execute("CREATE INDEX alarms_raised_at ON alarms(raised_at)")
+                await db.execute(
+                    "CREATE INDEX deliveries_pending ON deliveries(state, next_attempt)"
+                )
+                await db.execute("PRAGMA user_version = 2")
+            await db.commit()
+        except BaseException:
+            await db.rollback()
+            raise

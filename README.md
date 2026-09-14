@@ -1,164 +1,116 @@
-# BACnet Simulator
+# BACnet Simulator — Virtual HVAC Devices for BMS & SCADA Testing
 
-**Open-source BACnet/IP simulator for developers testing BACnet clients, BMS integrations, SCADA connectors, and HVAC automation software without physical devices.**
+**Open-source BACnet/IP simulator for developers testing BACnet clients, BMS integrations, SCADA connectors and HVAC automation without physical hardware.**
 
-Run a realistic BACnet test network in seconds with Docker: 7 virtual HVAC devices, ~50 BACnet points, REST API control, web dashboard, scenarios, alarms, and webhooks.
+Run **7 virtual HVAC devices and 44 BACnet points** with Python or Docker. Control the simulation through a REST API and web dashboard; test discovery, reads, writes, priorities, Change of Value (COV), device availability and signed webhooks.
 
-Use it to:
+[Quick start](#quick-start) · [Devices](#virtual-hvac-devices) · [API reference](docs/api.md) · [BACnet capabilities](docs/bacnet-profile.md)
 
-- test BACnet discovery, reads, writes, and device availability
-- simulate HVAC equipment such as AHUs, FCUs, thermostats, zone controllers, CO2 sensors, and outdoor temperature sensors
-- build and validate BMS, SCADA, building analytics, or digital twin integrations
-- run repeatable BACnet integration tests in development or CI/CD
-
-## Who is this for?
-
-BACnet Simulator is built for developers working on:
-
-- BACnet client libraries
-- BMS / Building Management System integrations
-- SCADA connectors
-- building analytics platforms
-- HVAC automation software
-- digital twin platforms for buildings
-- industrial IoT gateways
-- CI/CD tests requiring virtual BACnet/IP devices
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| **7 Virtual BACnet/IP Devices** | AHU, 2 FCUs, thermostat, zone controller, outdoor temp sensor, CO2 sensor |
-| **~50 BACnet Points** | Analog inputs/outputs/values, binary I/O, multi-state values |
-| **REST API** | Full CRUD for devices, scenarios, webhook endpoints, events |
-| **Web Dashboard** | Real-time monitoring with HTMX auto-refresh (zero JS build) |
-| **4 Simulation Scenarios** | HVAC day/night cycle, alarm simulation, device offline, manual override |
-| **Webhook Events** | HMAC-SHA256 signed delivery to external systems |
-| **Docker Compose** | One-command deployment on Linux with `network_mode: host` |
-| **SQLite Persistence** | Zero-configuration database |
-| **HTTP Basic Auth** | Optional authentication via environment variables |
-
-## Quick Start
-
-### Docker (recommended)
+## Quick start
 
 ```bash
 git clone https://github.com/quentinnippert/bacnet-simulator.git
 cd bacnet-simulator
+```
+
+**Local development** — Python 3.11–3.13 and uv 0.12.13:
+
+```bash
+uv sync --frozen --extra dev
+uv run python -m bacnet_lab
+```
+
+**Docker on Linux** — Docker Compose 2.24+:
+
+```bash
 docker compose up -d --build
 ```
 
-Open http://localhost:8080/ui for the web dashboard.
-
-> **Note:** `network_mode: host` is required for BACnet UDP broadcast and only works on Linux. For macOS/Windows development, see the [Getting Started guide](docs/getting-started.md#docker-macoswindows).
-
-### Local Development
+<details>
+<summary>Docker on macOS/Windows — API/UI development</summary>
 
 ```bash
-pip install -e ".[dev]"
-python -m bacnet_lab
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
-See the full [Getting Started guide](docs/getting-started.md) for detailed instructions.
+The bridge override does not provide LAN BACnet broadcast connectivity.
 
-## Simulated Devices
+</details>
 
-| Device | ID | Points | Description |
-|--------|----|--------|-------------|
-| AHU-01 | 1001 | 12 | Air Handling Unit — supply/return/mixed air temps, valves, fans, pressure |
-| FCU-01 | 2001 | 7 | Fan Coil Unit Zone 1 — room temp, valve, fan speed |
-| FCU-02 | 2002 | 7 | Fan Coil Unit Zone 2 — room temp, valve, fan speed |
-| TSTAT-01 | 3001 | 6 | Thermostat Lobby — temp, setpoints, occupancy |
-| ZC-01 | 4001 | 7 | Zone Controller — damper, airflow, CO2, occupancy |
-| OAT-01 | 5001 | 2 | Outdoor Temperature Sensor |
-| CO2-01 | 5002 | 3 | CO2 Sensor |
+Open the **[dashboard](http://localhost:8080/ui)** or **[interactive API docs](http://localhost:8080/docs)**. Defaults are local-only; `.env` is optional.
 
-Each device runs on a dedicated UDP port and is fully discoverable on the BACnet network. Device definitions are YAML files in `config/devices/` — easy to add or modify.
+> **Connecting a BACnet client:** defaults use `127.0.0.1:47808`–`47814`. Send a directed Who-Is to each address. A broadcast to one port does not discover the other ports. See [LAN and Docker networking](docs/configuration.md#network-topology).
 
-See [Devices documentation](docs/devices.md) for full point lists and custom device creation.
+## What you can test
 
-## Simulation Scenarios
+| Use case | Included capabilities |
+|---|---|
+| **BACnet client & BMS integration** | Discovery, property reads/writes, priority arrays, relinquish, COV |
+| **SCADA, building analytics & digital twins** | Virtual temperatures, valves, fans, occupancy and CO2 data |
+| **HVAC automation & failure handling** | Day/night cycle, high-temperature application alarms, device offline/recovery, manual overrides |
+| **Event-driven integrations** | HMAC-SHA256 webhooks, persistent queue, bounded retries and delivery history |
+| **Development & CI/CD** | YAML device definitions, Docker, automated tests, optional HTTP Basic auth |
 
-| Scenario | Description |
-|----------|-------------|
-| **HVAC Day/Night Cycle** | Compressed 24h simulation — outdoor temp varies, valves/fans respond, occupancy changes |
-| **Cyclic High Temp Alarm** | Periodically raises and clears a supply air temperature alarm |
-| **Device Offline** | Simulates a device going offline and recovering |
-| **Manual Override** | Overrides a point value for a configurable duration |
+## Virtual HVAC devices
 
-Start/stop scenarios via the REST API or web dashboard. See [Scenarios documentation](docs/scenarios.md).
+| Device | BACnet ID | Points | Equipment |
+|---|---|---|---|
+| AHU-01 | 1001 | 12 | Air handling unit: temperatures, valves, fans, duct pressure |
+| FCU-01 / FCU-02 | 2001 / 2002 | 7 each | Fan coil units: room temperature, setpoint, occupancy |
+| TSTAT-01 | 3001 | 6 | Thermostat: temperature, humidity, setpoints, operating mode |
+| ZC-01 | 4001 | 7 | Zone controller: airflow, damper, reheat |
+| OAT-01 | 5001 | 2 | Outdoor temperature and humidity sensor |
+| CO2-01 | 5002 | 3 | CO2 sensor, setpoint and alarm point |
 
-## REST API
+Analog, binary and multistate objects use real BACpypes3 protocol objects. Add devices in [`config/devices/`](config/devices/), then restart. [Full point lists and YAML example →](docs/devices.md)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/devices` | List all devices |
-| GET | `/api/devices/{id}` | Device details with points |
-| PUT | `/api/devices/{id}/points` | Write a point value |
-| GET | `/api/scenarios` | List scenarios |
-| POST | `/api/scenarios/{id}/start` | Start a scenario |
-| POST | `/api/scenarios/{id}/stop` | Stop a scenario |
-| GET | `/api/endpoints` | List webhook endpoints |
-| POST | `/api/endpoints` | Create webhook endpoint |
-| DELETE | `/api/endpoints/{id}` | Delete endpoint |
-| POST | `/api/endpoints/{id}/test` | Test webhook delivery |
-| GET | `/api/events` | Recent events |
-| GET | `/api/alarms` | Recent alarms |
+## Try the REST API
 
-See the full [API Reference](docs/api.md) for request/response examples.
+With the server running, open another terminal:
 
-## Use Cases
+```bash
+# Inspect devices and their BACnet addresses
+curl http://localhost:8080/api/devices
 
-- **BMS integration testing** — validate your Building Management System against realistic BACnet devices
-- **SCADA development** — build and test SCADA connectors without physical hardware
-- **BACnet client testing** — verify your BACnet client handles discovery, reads, writes, and COV correctly
-- **Building analytics prototyping** — develop analytics on realistic HVAC data streams
-- **CI/CD pipelines** — spin up a BACnet network in your test environment
-- **Training and demos** — demonstrate HVAC automation behavior without physical equipment
-- **Webhook integration testing** — verify your event handlers with real BACnet events
+# Command a cooling valve at priority 16
+curl -X PUT http://localhost:8080/api/devices/1001/points \
+  -H 'Content-Type: application/json' \
+  -d '{"point_name":"AHU-01/CoolingValve","value":80,"priority":16}'
 
-## Architecture
-
-Hexagonal architecture (ports & adapters) for clean testability and extensibility:
-
-```
-Domain (models, events, enums)
-    |
-Ports (abstract interfaces)
-    |
-Application Services (use cases)
-    |
-Adapters (BACnet/BAC0, HTTP/FastAPI, SQLite, Webhooks)
+# Start a compressed HVAC day/night cycle
+curl -X POST http://localhost:8080/api/scenarios/hvac_day_cycle/start
 ```
 
-See [Architecture documentation](docs/architecture.md) for details.
+Writes return the **effective value**: a higher priority can prevail. Send `"value":null` to release your priority slot. [API contracts →](docs/api.md)
 
-## Tech Stack
+## Development
 
-- **Python 3.11+** with async/await throughout
-- **BAC0** (BACpypes3) — BACnet/IP protocol stack
-- **FastAPI** + Uvicorn — REST API
-- **HTMX** + Jinja2 + Pico CSS — web dashboard (zero JS build)
-- **SQLite** via aiosqlite — persistence
-- **httpx** — async webhook delivery
+**Stack:** Python / BACpypes3 · FastAPI · HTMX / Jinja2 / Pico CSS · SQLite · httpx. No frontend build or CDN required.
+
+```bash
+uv run pytest -q                              # Application and unit tests
+BACNET_LAB_NETWORK_TESTS=1 uv run pytest -q     # Include real loopback UDP
+uv run ruff check .
+uv run ruff format --check .
+uv build
+```
+
+- Use **one application worker**; it owns devices, scenarios and delivery processing.
+- CI runs tests, including UDP, on Linux with Python 3.11–3.13.
+- Contributions should include a reproducible case and relevant regression coverage.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation, deployment, first steps |
-| [Devices](docs/devices.md) | Simulated devices, points, custom device creation |
-| [Scenarios](docs/scenarios.md) | Simulation scenarios and parameters |
-| [API Reference](docs/api.md) | REST API with request/response examples |
-| [Webhooks](docs/webhooks.md) | Event delivery, signatures, payload examples |
-| [Configuration](docs/configuration.md) | Settings, environment variables, authentication |
-| [Architecture](docs/architecture.md) | Project structure and design decisions |
+| Guide | Find out how to… |
+|---|---|
+| [Getting started](docs/getting-started.md) | Install, explore, upgrade and back up |
+| [Configuration](docs/configuration.md) | Configure LAN discovery, Docker, authentication and storage |
+| [Devices](docs/devices.md) / [Scenarios](docs/scenarios.md) | Customize points and run simulations |
+| [REST API](docs/api.md) / [Webhooks](docs/webhooks.md) | Integrate clients and event receivers |
+| [BACnet profile](docs/bacnet-profile.md) / [Architecture](docs/architecture.md) | Understand protocol support, guarantees and compatibility code |
 
-## Contributing
+**Storage:** process restarts reload simulation values from YAML; webhook registrations, history and pending deliveries persist.
 
-Contributions are welcome. Please open an issue to discuss your idea before submitting a PR.
+**Scope:** laboratory simulator; no BTL certification, native BACnet alarm notifications, routing/BBMD or BACnet/SC. Validate LAN behaviour with your target BMS. [Detailed limits →](docs/bacnet-profile.md#scope-and-verification)
 
-## License
-
-MIT
+[MIT License](LICENSE)

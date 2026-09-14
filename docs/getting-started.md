@@ -1,230 +1,96 @@
-# Getting Started
+# Getting started
 
-This guide covers installing and running BACnet Lab on your machine.
-
-## Prerequisites
-
-- **Python 3.11+** (for local development)
-- **Docker** and **Docker Compose** (for containerized deployment)
-
-## Local Development
-
-### Install
+## Install and run
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/bacnet-lab.git
-cd bacnet-lab
-pip install -e ".[dev]"
+git clone https://github.com/quentinnippert/bacnet-simulator.git
+cd bacnet-simulator
 ```
 
-### Run
+**Local development** — Python 3.11–3.13 and uv 0.12.13:
 
 ```bash
-python -m bacnet_lab
+uv sync --frozen --extra dev
+uv run python -m bacnet_lab
 ```
 
-The application starts on http://localhost:8080. Open http://localhost:8080/ui for the web dashboard.
-
-BACnet devices start listening on UDP ports starting at 47808 (one port per device). They are discoverable by any BACnet client on the same network.
-
-### Run Tests
-
-```bash
-pytest
-```
-
-Tests use a `FakeNetwork` adapter — no BAC0 or BACnet network required.
-
-## Docker (Linux)
-
-Linux is recommended for production because `network_mode: host` is required for BACnet UDP broadcast to work across the network.
-
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/bacnet-lab.git
-cd bacnet-lab
-
-# Configure authentication (optional)
-cp .env.example .env
-# Edit .env to set BACNET_LAB_AUTH_USERNAME and BACNET_LAB_AUTH_PASSWORD
-
-# Start
-docker compose up -d --build
-```
-
-BACnet devices are fully discoverable from any machine on the same subnet.
-
-### Stopping
-
-```bash
-docker compose down
-```
-
-### Viewing Logs
-
-```bash
-docker compose logs -f
-```
-
-## Docker (macOS/Windows)
-
-`network_mode: host` only works on Linux. For macOS and Windows, use the development override file which switches to bridge mode with port mapping:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-```
-
-**Limitations in bridge mode:**
-- BACnet devices are **not discoverable** from the host network (UDP broadcast doesn't cross Docker's virtual network)
-- The REST API and web dashboard work normally on http://localhost:8080
-- You can read/write BACnet points through the REST API
-
-This is suitable for developing against the API and UI. For full BACnet network testing, use a Linux machine or VM.
-
-## Deploy on a DigitalOcean Droplet
-
-### 1. Create the Droplet
-
-Create an **Ubuntu 22.04+** droplet (the $6/mo plan with 1 vCPU / 1 GB RAM is sufficient). Make sure you can SSH into it.
-
-### 2. Install Docker
-
-```bash
-ssh root@<DROPLET_IP>
-
-apt update && apt upgrade -y
-curl -fsSL https://get.docker.com | sh
-
-# Verify
-docker --version
-docker compose version
-```
-
-### 3. Configure the Firewall
-
-```bash
-ufw allow 22/tcp              # SSH
-ufw allow 8080/tcp             # BACnet Lab web/API
-ufw allow 47808:47815/udp      # BACnet UDP (7 devices)
-ufw enable
-```
-
-### 4. Clone and Configure
-
-```bash
-cd /opt
-git clone https://github.com/YOUR_USERNAME/bacnet-lab.git
-cd bacnet-lab
-
-cp .env.example .env
-nano .env
-```
-
-Set a strong password in `.env`:
-
-```
-BACNET_LAB_AUTH_USERNAME=admin
-BACNET_LAB_AUTH_PASSWORD=<YOUR_STRONG_PASSWORD>
-```
-
-Create the data directory for SQLite persistence:
-
-```bash
-mkdir -p data
-```
-
-### 5. Start
+**Docker on Linux** — Docker Compose 2.24+:
 
 ```bash
 docker compose up -d --build
 ```
 
-Verify:
+<details>
+<summary>Docker on macOS/Windows — API/UI development</summary>
 
 ```bash
-docker compose logs -f
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
-You should see `BACnet Lab ready on http://0.0.0.0:8080` and all 7 devices starting.
+The bridge override does not provide LAN BACnet broadcast connectivity.
 
-### 6. Access
+</details>
 
-Open `http://<DROPLET_IP>:8080/ui` in your browser. A login popup appears (HTTP Basic Auth). Enter the credentials from your `.env`.
+- Open [dashboard](http://localhost:8080/ui) / [API docs](http://localhost:8080/docs).
+- Defaults bind loopback. `.env` is optional; copy `.env.example` to customize.
+- Configure **both** auth fields to enable Basic auth. [Network/settings reference](configuration.md).
+- Startup reloads YAML inventory/values; SQLite preserves integration history and webhooks.
 
-Test from the command line:
+## First steps
+
+1. **Devices:** inspect values; edit a commandable point. Higher priorities may prevail.
+2. **Scenarios:** start HVAC Day/Night Cycle; try an alarm and inspect Events & Alarms.
+3. **Webhooks:** allow your receiver's hostname, recreate the service, register it and save the secret.
+
+## Remote access
+
+| Access | Setup |
+|---|---|
+| HTTP | Loopback + HTTPS reverse proxy or SSH tunnel; configure Basic auth beyond a trusted local machine |
+| BACnet UDP | Private LAN/VPN only; HTTP auth does not protect BACnet; no public UDP exposure |
+| Cloud | Does not automatically join your local broadcast domain |
 
 ```bash
-curl -u admin:<YOUR_PASSWORD> http://<DROPLET_IP>:8080/api/health
+ssh -L 8080:127.0.0.1:8080 user@your-server
 ```
 
-### Updating
+Then open the local dashboard URL.
 
-When you push new code to the repository:
+## Update and preserve data
 
 ```bash
-ssh root@<DROPLET_IP>
-cd /opt/bacnet-lab
 git pull
 docker compose up -d --build
 ```
 
-### Useful Commands
-
-| Action | Command |
+| Change | Action |
 |---|---|
-| View logs | `docker compose logs -f` |
-| Restart | `docker compose restart` |
-| Stop | `docker compose down` |
-| Rebuild | `docker compose up -d --build --force-recreate` |
-| Change password | Edit `.env` then `docker compose restart` |
+| `.env` | `docker compose up -d --force-recreate`; `restart` keeps the old environment |
+| Normal recreation | Named database volume stays attached |
+| Older installation | Back up **before** replacing the container; old DB may be `/app/bacnet_lab.db` outside the volume |
 
-## First Steps
+**Legacy migration:**
 
-### 1. Open the Dashboard
+1. Locate the actual DB; back it up with SQLite's backup API and copy the backup out.
+2. Restore as `bacnet_lab.db` in the new volume, writable by UID 10001.
+3. Start the app: migration is automatic; unknown newer schemas are rejected.
 
-Navigate to http://localhost:8080/ui. You'll see an overview of all 7 simulated devices and their current status.
+Copying only a live `.db` file may omit WAL data.
 
-### 2. Start a Scenario
-
-Go to the Scenarios tab and start the **HVAC Day/Night Cycle**. This runs a compressed 24-hour HVAC simulation — you'll see temperatures, valve positions, and fan speeds changing in real time.
-
-### 3. Explore the API
-
-List all devices:
+## Verify / troubleshoot
 
 ```bash
-curl http://localhost:8080/api/devices
+uv run pytest -q
+BACNET_LAB_NETWORK_TESTS=1 uv run pytest -q
+uv run ruff check .
+uv run ruff format --check .
+uv build
+docker compose config --quiet
 ```
 
-Get details for a specific device:
-
-```bash
-curl http://localhost:8080/api/devices/1001
-```
-
-Write a point value:
-
-```bash
-curl -X PUT http://localhost:8080/api/devices/1001/points \
-  -H "Content-Type: application/json" \
-  -d '{"point_name": "AHU-01/CoolingValve", "value": 80.0}'
-```
-
-### 4. Set Up a Webhook
-
-Register an endpoint to receive real-time events:
-
-```bash
-curl -X POST http://localhost:8080/api/endpoints \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://your-server.com/webhook"}'
-```
-
-Save the returned `secret` — you'll need it to verify webhook signatures. See [Webhooks documentation](webhooks.md).
-
-## What's Next
-
-- [Devices](devices.md) — learn about the simulated devices and how to create custom ones
-- [Scenarios](scenarios.md) — understand the simulation scenarios and their parameters
-- [API Reference](api.md) — full REST API documentation
-- [Configuration](configuration.md) — environment variables and settings
+| Signal | Meaning |
+|---|---|
+| UDP tests cannot bind | Allow loopback sockets |
+| `/api/health` → 503 | Inspect returned errors |
+| Fewer `online_devices` | Can be intentional during the offline scenario |
+| Missing webhook | Inspect `/api/deliveries` for pending/retrying/failed work |

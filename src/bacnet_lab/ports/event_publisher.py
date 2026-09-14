@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Coroutine
+from collections.abc import Callable, Coroutine
 
 from bacnet_lab.domain.events import DomainEvent
-
 
 EventHandler = Callable[[DomainEvent], Coroutine]
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import aiosqlite
 
+from bacnet_lab.adapters.persistence.database import connect
 from bacnet_lab.domain.enums import (
     AlarmSeverity,
     DeviceStatus,
@@ -24,14 +25,11 @@ from bacnet_lab.ports.repositories import (
 
 
 def _parse_value(raw: str) -> float | int | bool | str:
-    if raw in ("true", "True"):
-        return True
-    if raw in ("false", "False"):
-        return False
+    """Legacy v1 values were untyped strings; new writes use JSON exclusively."""
+    if raw in ("True", "False"):
+        return raw == "True"
     try:
-        if "." in raw:
-            return float(raw)
-        return int(raw)
+        return json.loads(raw)
     except (ValueError, TypeError):
         return raw
 
@@ -41,10 +39,11 @@ class SqliteDeviceRepository(DeviceRepositoryPort):
         self._db_path = db_path
 
     async def save(self, device: Device) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
-                "INSERT OR REPLACE INTO devices (device_id, name, description, ip, port, status) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO devices (device_id, name, description, ip, port, status) "
+                "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(device_id) DO UPDATE SET "
+                "name=excluded.name, description=excluded.description, ip=excluded.ip, port=excluded.port, status=excluded.status",
                 (
                     device.device_id,
                     device.name,
@@ -54,37 +53,35 @@ class SqliteDeviceRepository(DeviceRepositoryPort):
                     device.status.value,
                 ),
             )
+            await db.execute("DELETE FROM points WHERE device_id = ?", (device.device_id,))
             for point in device.points:
                 await db.execute(
                     "INSERT OR REPLACE INTO points "
                     "(device_id, object_type, object_instance, object_name, "
-                    "description, present_value, units, cov_increment) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "description, present_value, units, cov_increment, state_text) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         device.device_id,
                         point.object_type.value,
                         point.object_instance,
                         point.object_name,
                         point.description,
-                        str(point.present_value),
+                        json.dumps(point.present_value, allow_nan=False),
                         point.units,
                         point.cov_increment,
+                        json.dumps(point.state_text),
                     ),
                 )
             await db.commit()
 
     async def get(self, device_id: int) -> Device | None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM devices WHERE device_id = ?", (device_id,)
-            )
+            cursor = await db.execute("SELECT * FROM devices WHERE device_id = ?", (device_id,))
             row = await cursor.fetchone()
             if not row:
                 return None
-            cursor = await db.execute(
-                "SELECT * FROM points WHERE device_id = ?", (device_id,)
-            )
+            cursor = await db.execute("SELECT * FROM points WHERE device_id = ?", (device_id,))
             point_rows = await cursor.fetchall()
             points = [
                 Point(
@@ -92,7 +89,8 @@ class SqliteDeviceRepository(DeviceRepositoryPort):
                     object_instance=pr["object_instance"],
                     object_name=pr["object_name"],
                     description=pr["description"],
-                    present_value=_parse_value(pr["present_value"]),
+                    present_value=json.loads(pr["present_value"]),
+                    state_text=json.loads(pr["state_text"]),
                     units=pr["units"],
                     cov_increment=pr["cov_increment"],
                 )
@@ -108,29 +106,57 @@ class SqliteDeviceRepository(DeviceRepositoryPort):
             )
 
     async def list_all(self) -> list[Device]:
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            cursor = await db.execute("SELECT device_id FROM devices ORDER BY device_id")
-            rows = await cursor.fetchall()
-        devices = []
-        for row in rows:
-            device = await self.get(row["device_id"])
-            if device:
-                devices.append(device)
-        return devices
+        async with connect(self._db_path) as db:
+            rows = await (await db.execute("SELECT * FROM devices ORDER BY device_id")).fetchall()
+            point_rows = await (
+                await db.execute("SELECT * FROM points ORDER BY object_type, object_instance")
+            ).fetchall()
+        points = {}
+        for row in point_rows:
+            points.setdefault(row["device_id"], []).append(
+                Point(
+                    object_type=PointType(row["object_type"]),
+                    object_instance=row["object_instance"],
+                    object_name=row["object_name"],
+                    description=row["description"],
+                    present_value=json.loads(row["present_value"]),
+                    units=row["units"],
+                    cov_increment=row["cov_increment"],
+                    state_text=json.loads(row["state_text"]),
+                )
+            )
+        return [
+            Device(
+                device_id=r["device_id"],
+                name=r["name"],
+                description=r["description"],
+                status=DeviceStatus(r["status"]),
+                address=DeviceAddress(r["ip"], r["port"]) if r["ip"] else None,
+                points=points.get(r["device_id"], []),
+            )
+            for r in rows
+        ]
+
+    async def reconcile(self, device_ids: set[int]) -> None:
+        async with connect(self._db_path) as db:
+            ids = tuple(device_ids)
+            placeholders = ",".join("?" for _ in ids)
+            await db.execute(f"DELETE FROM points WHERE device_id NOT IN ({placeholders})", ids)
+            await db.execute(f"DELETE FROM devices WHERE device_id NOT IN ({placeholders})", ids)
+            await db.commit()
 
     async def update_point_value(
         self, device_id: int, point_name: str, value: float | int | bool | str
     ) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
                 "UPDATE points SET present_value = ? WHERE device_id = ? AND object_name = ?",
-                (str(value), device_id, point_name),
+                (json.dumps(value, allow_nan=False), device_id, point_name),
             )
             await db.commit()
 
     async def update_status(self, device_id: int, status: str) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
                 "UPDATE devices SET status = ? WHERE device_id = ?",
                 (status, device_id),
@@ -143,11 +169,12 @@ class SqliteEndpointRepository(EndpointRepositoryPort):
         self._db_path = db_path
 
     async def save(self, endpoint: OutboundEndpoint) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
-                "INSERT OR REPLACE INTO endpoints "
+                "INSERT INTO endpoints "
                 "(id, url, secret, enabled, event_types, created_at, last_delivery_at, failure_count) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+                "url=excluded.url, secret=excluded.secret, enabled=excluded.enabled, event_types=excluded.event_types",
                 (
                     endpoint.id,
                     endpoint.url,
@@ -162,7 +189,7 @@ class SqliteEndpointRepository(EndpointRepositoryPort):
             await db.commit()
 
     async def get(self, endpoint_id: str) -> OutboundEndpoint | None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM endpoints WHERE id = ?", (endpoint_id,))
             row = await cursor.fetchone()
@@ -171,23 +198,23 @@ class SqliteEndpointRepository(EndpointRepositoryPort):
             return self._row_to_endpoint(row)
 
     async def list_all(self) -> list[OutboundEndpoint]:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM endpoints ORDER BY created_at")
             rows = await cursor.fetchall()
             return [self._row_to_endpoint(r) for r in rows]
 
     async def delete(self, endpoint_id: str) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute("DELETE FROM endpoints WHERE id = ?", (endpoint_id,))
             await db.commit()
 
     async def update_delivery_status(self, endpoint_id: str, success: bool) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             if success:
                 await db.execute(
                     "UPDATE endpoints SET last_delivery_at = ?, failure_count = 0 WHERE id = ?",
-                    (datetime.now(timezone.utc).isoformat(), endpoint_id),
+                    (datetime.now(UTC).isoformat(), endpoint_id),
                 )
             else:
                 await db.execute(
@@ -207,9 +234,7 @@ class SqliteEndpointRepository(EndpointRepositoryPort):
             event_types=[EventType(et) for et in event_types_raw],
             created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
             last_delivery_at=(
-                datetime.fromisoformat(row["last_delivery_at"])
-                if row["last_delivery_at"]
-                else None
+                datetime.fromisoformat(row["last_delivery_at"]) if row["last_delivery_at"] else None
             ),
             failure_count=row["failure_count"],
         )
@@ -220,7 +245,7 @@ class SqliteEventLogRepository(EventLogRepositoryPort):
         self._db_path = db_path
 
     async def save(self, event: ReplicationEvent) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
                 "INSERT OR REPLACE INTO events (id, event_type, timestamp, payload, delivered) "
                 "VALUES (?, ?, ?, ?, ?)",
@@ -235,7 +260,7 @@ class SqliteEventLogRepository(EventLogRepositoryPort):
             await db.commit()
 
     async def list_recent(self, limit: int = 50) -> list[ReplicationEvent]:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM events ORDER BY timestamp DESC LIMIT ?", (limit,)
@@ -253,9 +278,139 @@ class SqliteEventLogRepository(EventLogRepositoryPort):
             ]
 
     async def mark_delivered(self, event_id: str) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute("UPDATE events SET delivered = 1 WHERE id = ?", (event_id,))
             await db.commit()
+
+    async def record(self, event: ReplicationEvent, endpoint_ids: list[str]) -> None:
+        async with connect(self._db_path) as db:
+            await db.execute(
+                "INSERT INTO events (id,event_type,timestamp,payload,delivered) VALUES (?,?,?,?,0)",
+                (
+                    event.id,
+                    event.event_type.value,
+                    event.timestamp.isoformat(),
+                    json.dumps(event.payload, allow_nan=False),
+                ),
+            )
+            await db.executemany(
+                "INSERT INTO deliveries (event_id,endpoint_id) VALUES (?,?)",
+                [(event.id, identifier) for identifier in endpoint_ids],
+            )
+            payload = event.payload
+            if event.event_type == EventType.ALARM_RAISED:
+                await db.execute(
+                    "INSERT INTO alarms (id,device_id,point_name,severity,message,raised_at) VALUES (?,?,?,?,?,?)",
+                    (
+                        payload["alarm_id"],
+                        payload["device_id"],
+                        payload["point_name"],
+                        payload["severity"],
+                        payload["message"],
+                        event.timestamp.isoformat(),
+                    ),
+                )
+            elif event.event_type == EventType.ALARM_CLEARED:
+                await db.execute(
+                    "UPDATE alarms SET cleared_at=? WHERE id=?",
+                    (event.timestamp.isoformat(), payload["alarm_id"]),
+                )
+            await db.commit()
+
+    async def pending_deliveries(self, now: float, limit: int = 4) -> list[dict]:
+        async with connect(self._db_path) as db:
+            rows = await (
+                await db.execute(
+                    """SELECT d.* FROM deliveries d
+                JOIN endpoints ep ON ep.id=d.endpoint_id
+                WHERE d.state='pending' AND d.next_attempt<=? AND ep.enabled=1
+                AND NOT EXISTS (SELECT 1 FROM deliveries earlier
+                    WHERE earlier.endpoint_id=d.endpoint_id AND earlier.state='pending' AND earlier.id<d.id)
+                ORDER BY d.id LIMIT ?""",
+                    (now, limit),
+                )
+            ).fetchall()
+            result = []
+            for row in rows:
+                event = await (
+                    await db.execute("SELECT * FROM events WHERE id=?", (row["event_id"],))
+                ).fetchone()
+                endpoint = await (
+                    await db.execute("SELECT * FROM endpoints WHERE id=?", (row["endpoint_id"],))
+                ).fetchone()
+                if event is None or endpoint is None:
+                    continue
+                result.append(
+                    dict(
+                        id=row["id"],
+                        attempts=row["attempts"],
+                        event=ReplicationEvent(
+                            id=event["id"],
+                            event_type=EventType(event["event_type"]),
+                            timestamp=datetime.fromisoformat(event["timestamp"]),
+                            payload=json.loads(event["payload"]),
+                        ),
+                        endpoint=SqliteEndpointRepository._row_to_endpoint(endpoint),
+                    )
+                )
+            return result
+
+    async def finish_delivery(self, delivery_id: int, success: bool, now: float) -> None:
+        async with connect(self._db_path) as db:
+            row = await (
+                await db.execute("SELECT * FROM deliveries WHERE id=?", (delivery_id,))
+            ).fetchone()
+            if row is None:  # Endpoint may have been deleted while HTTP was in flight.
+                return
+            attempts = row["attempts"] + 1
+            state = "delivered" if success else ("failed" if attempts >= 5 else "pending")
+            await db.execute(
+                "UPDATE deliveries SET attempts=?,state=?,next_attempt=?,last_error=? WHERE id=?",
+                (
+                    attempts,
+                    state,
+                    now + min(60, 2**attempts),
+                    None if success else "HTTP delivery failed",
+                    delivery_id,
+                ),
+            )
+            if success:
+                await db.execute(
+                    "UPDATE endpoints SET last_delivery_at=?, failure_count=0 WHERE id=?",
+                    (datetime.now(UTC).isoformat(), row["endpoint_id"]),
+                )
+            else:
+                await db.execute(
+                    "UPDATE endpoints SET failure_count=failure_count+1 WHERE id=?",
+                    (row["endpoint_id"],),
+                )
+            await db.execute(
+                "UPDATE events SET delivered=NOT EXISTS (SELECT 1 FROM deliveries WHERE event_id=? AND state!='delivered') WHERE id=?",
+                (row["event_id"], row["event_id"]),
+            )
+            await db.commit()
+
+    async def delivery_history(self, limit: int = 100) -> list[dict]:
+        async with connect(self._db_path) as db:
+            rows = await (
+                await db.execute("SELECT * FROM deliveries ORDER BY id DESC LIMIT ?", (limit,))
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    async def prune(self, before: str) -> None:
+        async with connect(self._db_path) as db:
+            await db.execute(
+                "DELETE FROM events WHERE timestamp<? AND NOT EXISTS (SELECT 1 FROM deliveries WHERE event_id=events.id AND state='pending')",
+                (before,),
+            )
+            await db.execute(
+                "DELETE FROM alarms WHERE cleared_at IS NOT NULL AND raised_at<?", (before,)
+            )
+            await db.commit()
+
+    async def check(self) -> None:
+        async with connect(self._db_path) as db:
+            await db.execute("SELECT 1 FROM events LIMIT 1")
 
 
 class SqliteAlarmRepository(AlarmRepositoryPort):
@@ -263,7 +418,7 @@ class SqliteAlarmRepository(AlarmRepositoryPort):
         self._db_path = db_path
 
     async def save(self, alarm: Alarm) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
                 "INSERT OR REPLACE INTO alarms "
                 "(id, device_id, point_name, severity, message, raised_at, cleared_at) "
@@ -281,7 +436,7 @@ class SqliteAlarmRepository(AlarmRepositoryPort):
             await db.commit()
 
     async def get_active(self) -> list[Alarm]:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM alarms WHERE cleared_at IS NULL ORDER BY raised_at DESC"
@@ -290,15 +445,15 @@ class SqliteAlarmRepository(AlarmRepositoryPort):
             return [self._row_to_alarm(r) for r in rows]
 
     async def clear(self, alarm_id: str) -> None:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             await db.execute(
                 "UPDATE alarms SET cleared_at = ? WHERE id = ?",
-                (datetime.now(timezone.utc).isoformat(), alarm_id),
+                (datetime.now(UTC).isoformat(), alarm_id),
             )
             await db.commit()
 
     async def list_recent(self, limit: int = 50) -> list[Alarm]:
-        async with aiosqlite.connect(self._db_path) as db:
+        async with connect(self._db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM alarms ORDER BY raised_at DESC LIMIT ?", (limit,)

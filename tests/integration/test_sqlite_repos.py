@@ -1,6 +1,6 @@
-import asyncio
 import os
 import tempfile
+from datetime import UTC, datetime
 
 import pytest
 
@@ -21,14 +21,13 @@ from bacnet_lab.domain.models.device import Device, Point
 from bacnet_lab.domain.models.endpoint import OutboundEndpoint
 from bacnet_lab.domain.models.event import Alarm, ReplicationEvent
 from bacnet_lab.domain.value_objects import DeviceAddress
-from datetime import datetime, timezone
 
 
 @pytest.fixture
-def db_path():
+async def db_path():
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
-    asyncio.get_event_loop().run_until_complete(run_migrations(path))
+    await run_migrations(path)
     yield path
     os.unlink(path)
 
@@ -117,7 +116,7 @@ async def test_endpoint_crud(endpoint_repo):
         secret="secret123",
         enabled=True,
         event_types=[EventType.POINT_VALUE_CHANGED],
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     await endpoint_repo.save(ep)
 
@@ -137,7 +136,7 @@ async def test_event_log(event_repo):
     event = ReplicationEvent(
         id="evt1",
         event_type=EventType.POINT_VALUE_CHANGED,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         payload={"test": True},
     )
     await event_repo.save(event)
@@ -159,7 +158,7 @@ async def test_alarm_repo(alarm_repo):
         point_name="AHU-01/Temp",
         severity=AlarmSeverity.HIGH,
         message="Too hot",
-        raised_at=datetime.now(timezone.utc),
+        raised_at=datetime.now(UTC),
     )
     await alarm_repo.save(alarm)
 

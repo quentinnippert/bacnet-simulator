@@ -1,7 +1,8 @@
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 import os
 import tempfile
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from copy import deepcopy
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -9,7 +10,6 @@ from httpx import ASGITransport, AsyncClient
 from bacnet_lab.adapters.bacnet.device_factory import load_all_devices
 from bacnet_lab.adapters.event_bus.in_process import InProcessEventPublisher
 from bacnet_lab.adapters.http.app import create_app
-from bacnet_lab.adapters.http.dependencies import set_container
 from bacnet_lab.adapters.persistence.migrations import run_migrations
 from bacnet_lab.adapters.persistence.sqlite_repos import (
     SqliteAlarmRepository,
@@ -26,6 +26,7 @@ from bacnet_lab.application.scenario_service import ScenarioService
 from bacnet_lab.application.telemetry_service import TelemetryService
 from bacnet_lab.bootstrap import Container
 from bacnet_lab.domain.enums import PointType
+from bacnet_lab.domain.errors import UnavailableError
 from bacnet_lab.domain.models.device import Device
 from bacnet_lab.domain.value_objects import PointValue
 from bacnet_lab.infrastructure.config import AppSettings
@@ -33,13 +34,18 @@ from bacnet_lab.ports.device_network import DeviceNetworkPort
 
 
 class FakeNetwork(DeviceNetworkPort):
-    """In-memory fake for tests (no BAC0 needed)."""
+    """In-memory fake for tests (no UDP sockets needed)."""
 
     def __init__(self):
         self._devices: dict[int, Device] = {}
+        self._revisions = {}
 
     async def start_device(self, device: Device, udp_port: int) -> None:
-        self._devices[device.device_id] = device
+        self._devices[device.device_id] = deepcopy(device)
+        self._defaults = getattr(self, "_defaults", {})
+        self._priorities = getattr(self, "_priorities", {})
+        for point in device.points:
+            self._defaults[(device.device_id, point.object_name)] = point.present_value
 
     async def stop_device(self, device_id: int) -> None:
         self._devices.pop(device_id, None)
@@ -48,13 +54,33 @@ class FakeNetwork(DeviceNetworkPort):
         self._devices.clear()
 
     async def write_point_value(
-        self, device_id: int, object_type: PointType, instance: int, value: PointValue
-    ) -> None:
+        self,
+        device_id: int,
+        object_type: PointType,
+        instance: int,
+        value: PointValue | None,
+        priority: int = 16,
+    ) -> int:
         device = self._devices.get(device_id)
         if device:
             point = device.get_point(object_type, instance)
             if point:
-                point.present_value = value
+                key = (device_id, point.object_name)
+                if point.commandable:
+                    priorities = self._priorities.setdefault(key, {})
+                    if value is None:
+                        priorities.pop(priority, None)
+                    else:
+                        priorities[priority] = value
+                    point.present_value = (
+                        priorities[min(priorities)] if priorities else self._defaults[key]
+                    )
+                else:
+                    point.present_value = value
+                revision_key = (key, priority if point.commandable else 0)
+                self._revisions[revision_key] = self._revisions.get(revision_key, 0) + 1
+                return self._revisions[revision_key]
+        raise UnavailableError("Device not running")
 
     async def read_point_value(
         self, device_id: int, object_type: PointType, instance: int
@@ -64,7 +90,21 @@ class FakeNetwork(DeviceNetworkPort):
             point = device.get_point(object_type, instance)
             if point:
                 return point.present_value
-        return 0
+        raise UnavailableError("Device not running")
+
+    async def read_priority_value(self, device_id, object_type, instance, priority):
+        point = self._devices[device_id].get_point(object_type, instance)
+        return self._priorities.get((device_id, point.object_name), {}).get(priority)
+
+    async def read_control_state(self, device_id, object_type, instance, priority):
+        point = self._devices[device_id].get_point(object_type, instance)
+        value = (
+            await self.read_priority_value(device_id, object_type, instance, priority)
+            if point.commandable
+            else point.present_value
+        )
+        key = ((device_id, point.object_name), priority if point.commandable else 0)
+        return value, self._revisions.get(key, 0)
 
 
 @asynccontextmanager
@@ -90,7 +130,11 @@ async def make_test_client(
         )
         scenario_registry = ScenarioRegistry()
         scenario_service = ScenarioService(runner=scenario_registry)
-        endpoint_service = EndpointService(repo=endpoint_repo, delivery=webhook_delivery)
+        endpoint_service = EndpointService(
+            repo=endpoint_repo,
+            delivery=webhook_delivery,
+            allowed_hosts=["example.com", "localhost"],
+        )
         event_service = EventService(
             event_publisher=event_publisher,
             event_log_repo=event_log_repo,
@@ -114,13 +158,15 @@ async def make_test_client(
             engine=None,
             event_publisher=event_publisher,
         )
-        set_container(container)
 
-        app = create_app(auth_username=auth_username, auth_password=auth_password)
+        app = create_app(
+            auth_username=auth_username, auth_password=auth_password, container=container
+        )
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
     finally:
+        await webhook_delivery.close()
         os.unlink(db_path)
 
 

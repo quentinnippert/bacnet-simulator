@@ -1,24 +1,33 @@
 <table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Instance</th>
-            <th>Value</th>
-            <th>Units</th>
-            <th>Description</th>
-        </tr>
-    </thead>
+    <thead><tr><th>Name</th><th>Type</th><th>Instance</th><th>Effective value</th><th>Units</th><th>Description</th></tr></thead>
     <tbody>
-        {% for point in device.points %}
-        <tr>
-            <td><strong>{{ point.object_name }}</strong></td>
-            <td><code>{{ point.object_type.value }}</code></td>
-            <td>{{ point.object_instance }}</td>
-            <td><strong>{{ point.present_value }}</strong></td>
-            <td>{{ point.units }}</td>
-            <td>{{ point.description }}</td>
-        </tr>
-        {% endfor %}
+    {% for point in device.points %}
+    <tr>
+        <td><strong>{{ point.object_name }}</strong></td>
+        <td><code>{{ point.object_type.value }}</code></td>
+        <td>{{ point.object_instance }}</td>
+        <td>
+        {% if point.commandable and device.status.value == 'online' %}
+            <form data-api="/api/devices/{{ device.device_id }}/points" data-method="PUT">
+                <input type="hidden" name="point_name" value="{{ point.object_name }}">
+                {% if point.object_type.value.startswith('binary') %}
+                <select name="value" data-kind="boolean" aria-label="{{ point.object_name }} value">
+                    <option value="true" {% if point.present_value %}selected{% endif %}>Active</option>
+                    <option value="false" {% if not point.present_value %}selected{% endif %}>Inactive</option>
+                </select>
+                {% elif point.state_text %}
+                <select name="value" data-kind="number" aria-label="{{ point.object_name }} value">
+                    {% for label in point.state_text %}<option value="{{ loop.index }}" {% if point.present_value == loop.index %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+                {% else %}
+                <input type="number" step="any" name="value" data-kind="number" value="{{ point.present_value }}" aria-label="{{ point.object_name }} value" required>
+                {% endif %}
+                <button type="submit">Apply</button>
+            </form>
+        {% else %}<strong>{{ point.present_value }}</strong>{% endif %}
+        </td>
+        <td>{{ point.units }}</td><td>{{ point.description }}</td>
+    </tr>
+    {% endfor %}
     </tbody>
 </table>

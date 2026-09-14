@@ -1,5 +1,7 @@
 services:
   bacnet-lab:
     network_mode: bridge
+    environment:
+      BACNET_LAB_HTTP_HOST: 0.0.0.0
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"

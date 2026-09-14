@@ -33,6 +33,7 @@ class EventType(StrEnum):
     ALARM_CLEARED = "alarm_cleared"
     SCENARIO_STARTED = "scenario_started"
     SCENARIO_STOPPED = "scenario_stopped"
+    SCENARIO_FAILED = "scenario_failed"
     TELEMETRY_SNAPSHOT = "telemetry_snapshot"
 
 

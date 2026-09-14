@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 
 from bacnet_lab.adapters.scenarios.base import BaseScenario
@@ -9,87 +8,46 @@ from bacnet_lab.domain.enums import AlarmSeverity
 from bacnet_lab.domain.events import AlarmCleared, AlarmRaised
 from bacnet_lab.domain.models.scenario import ScenarioParameter
 
-logger = logging.getLogger(__name__)
-
 
 class AlarmScenario(BaseScenario):
     id = "alarm_cycle"
     name = "Cyclic High Temperature Alarm"
-    description = "Periodically raises and clears a high supply air temperature alarm on AHU-01."
+    description = "Raise an application alarm while holding a supply temperature, then restore it."
 
     def default_parameters(self) -> list[ScenarioParameter]:
         return [
-            ScenarioParameter(name="alarm_duration", description="Alarm active duration (s)", default=15),
-            ScenarioParameter(name="clear_duration", description="Clear duration (s)", default=20),
-            ScenarioParameter(name="high_temp", description="High temperature value", default=35.0),
-            ScenarioParameter(name="normal_temp", description="Normal temperature value", default=22.5),
+            ScenarioParameter("device_id", "Target device ID", 1001),
+            ScenarioParameter("point_name", "Target temperature", "AHU-01/SupplyAirTemp"),
+            ScenarioParameter("alarm_duration", "Alarm duration in seconds", 15),
+            ScenarioParameter("clear_duration", "Clear duration in seconds", 20),
+            ScenarioParameter("high_temp", "Alarm temperature", 35.0),
         ]
 
+    def validate(self) -> None:
+        self.require_point(
+            self.parameter("device_id"), self.parameter("point_name"), self.parameter("high_temp")
+        )
+
     async def run(self) -> None:
-        alarm_dur = float(self._parameters[0].value)
-        clear_dur = float(self._parameters[1].value)
-        high_temp = float(self._parameters[2].value)
-        normal_temp = float(self._parameters[3].value)
-
-        active_alarm_id: str | None = None
-
-        try:
-            while self.is_running:
+        device_id, point_name = self.parameter("device_id"), self.parameter("point_name")
+        while self.is_running:
+            async with self._device_service.override(
+                device_id, point_name, self.parameter("high_temp"), self.id
+            ):
                 alarm_id = str(uuid.uuid4())
-                active_alarm_id = alarm_id
-
-                # Raise alarm
                 try:
-                    await self._device_service.write_point_by_name(
-                        1001, "AHU-01/SupplyAirTemp", high_temp
+                    await self._event_publisher.publish(
+                        AlarmRaised(
+                            alarm_id=alarm_id,
+                            device_id=device_id,
+                            point_name=point_name,
+                            severity=AlarmSeverity.HIGH,
+                            message=f"Temperature forced to {self.parameter('high_temp')}°C",
+                        )
                     )
-                except Exception as e:
-                    logger.error("Failed to write high temp: %s", e)
-
-                await self._event_publisher.publish(
-                    AlarmRaised(
-                        alarm_id=alarm_id,
-                        device_id=1001,
-                        point_name="AHU-01/SupplyAirTemp",
-                        severity=AlarmSeverity.HIGH,
-                        message=f"Supply air temperature exceeded threshold: {high_temp}°C",
+                    await asyncio.sleep(self.parameter("alarm_duration"))
+                finally:
+                    await self._event_publisher.publish(
+                        AlarmCleared(alarm_id=alarm_id, device_id=device_id, point_name=point_name)
                     )
-                )
-                await asyncio.sleep(alarm_dur)
-
-                if not self.is_running:
-                    break
-
-                # Clear alarm
-                try:
-                    await self._device_service.write_point_by_name(
-                        1001, "AHU-01/SupplyAirTemp", normal_temp
-                    )
-                except Exception as e:
-                    logger.error("Failed to write normal temp: %s", e)
-
-                await self._event_publisher.publish(
-                    AlarmCleared(
-                        alarm_id=alarm_id,
-                        device_id=1001,
-                        point_name="AHU-01/SupplyAirTemp",
-                    )
-                )
-                active_alarm_id = None
-                await asyncio.sleep(clear_dur)
-        finally:
-            # Clear any dangling alarm on stop/cancellation
-            if active_alarm_id:
-                try:
-                    await self._device_service.write_point_by_name(
-                        1001, "AHU-01/SupplyAirTemp", normal_temp
-                    )
-                except Exception as e:
-                    logger.error("Failed to restore temp on cleanup: %s", e)
-                await self._event_publisher.publish(
-                    AlarmCleared(
-                        alarm_id=active_alarm_id,
-                        device_id=1001,
-                        point_name="AHU-01/SupplyAirTemp",
-                    )
-                )
+            await asyncio.sleep(self.parameter("clear_duration"))

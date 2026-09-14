@@ -25,3 +25,6 @@ class ScenarioService:
     async def stop_scenario(self, scenario_id: str) -> Scenario:
         logger.info("Stopping scenario %s", scenario_id)
         return await self._runner.stop(scenario_id)
+
+    async def stop_all(self) -> None:
+        await self._runner.stop_all()

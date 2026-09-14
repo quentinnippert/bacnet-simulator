@@ -1,11 +1,14 @@
 http:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8080
-
 bacnet:
-  ip: "0.0.0.0"
+  ip: "127.0.0.1"
+  prefix: 32
   port_start: 47808
-
-db_path: "bacnet_lab.db"
+db_path: "data/bacnet_lab.db"
 log_level: "INFO"
 devices_dir: "config/devices"
+sync_interval: 0.25
+snapshot_interval: 300
+retention_days: 30
+webhook_allowed_hosts: ["localhost", "127.0.0.1"]

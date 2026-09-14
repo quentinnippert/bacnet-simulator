@@ -1,19 +1,20 @@
-{% if not scenarios %}
-<p>No scenarios registered.</p>
-{% endif %}
 {% for scenario in scenarios %}
 <article>
-    <header>
-        <strong>{{ scenario.name }}</strong>
-        <span class="status-badge status-{{ scenario.status.value }}">{{ scenario.status.value }}</span>
-    </header>
+    <header><strong>{{ scenario.name }}</strong><span class="status-badge status-{{ scenario.status.value }}">{{ scenario.status.value }}</span></header>
     <p>{{ scenario.description }}</p>
-    <footer>
-        {% if scenario.status.value == 'running' %}
-        <button hx-post="/api/scenarios/{{ scenario.id }}/stop" hx-swap="none" class="secondary">Stop</button>
-        {% else %}
-        <button hx-post="/api/scenarios/{{ scenario.id }}/start" hx-swap="none">Start</button>
-        {% endif %}
-    </footer>
+    {% if scenario.error %}<p role="alert">{{ scenario.error }}</p>{% endif %}
+    {% if scenario.status.value == 'running' %}
+    <form data-api="/api/scenarios/{{ scenario.id }}/stop"><button type="submit">Stop</button></form>
+    {% else %}
+    <form data-api="/api/scenarios/{{ scenario.id }}/start" data-scenario="true">
+        {% for parameter in scenario.parameters %}
+        <label>{{ parameter.description }}
+            <input name="{{ parameter.name }}" value="{{ parameter.value }}"
+                {% if parameter.default is number %}type="number" step="any" data-kind="number"{% else %}type="text"{% endif %} required>
+        </label>
+        {% endfor %}
+        <button type="submit">Start</button>
+    </form>
+    {% endif %}
 </article>
-{% endfor %}
+{% else %}<p>No scenarios configured.</p>{% endfor %}

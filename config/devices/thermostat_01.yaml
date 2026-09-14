@@ -34,6 +34,7 @@ points:
     object_instance: 1
     object_name: "TSTAT-01/Mode"
     description: "Operating mode (1=Off, 2=Cool, 3=Heat, 4=Auto)"
+    state_text: ["Off", "Cool", "Heat", "Auto"]
     present_value: 4
   - object_type: binaryInput
     object_instance: 1

@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from bacnet_lab.domain.events import PointValueChanged, TelemetrySnapshotTaken
-from bacnet_lab.domain.value_objects import PointValue
+from bacnet_lab.application.device_service import DeviceService
+from bacnet_lab.domain.enums import DeviceStatus
+from bacnet_lab.domain.events import TelemetrySnapshotTaken
 from bacnet_lab.ports.event_publisher import EventPublisherPort
 
 logger = logging.getLogger(__name__)
@@ -14,20 +15,21 @@ class TelemetryService:
     def __init__(
         self,
         event_publisher: EventPublisherPort,
-        snapshot_interval: float = 300.0,
+        snapshot_interval: float = 300,
+        sync_interval: float = 0.25,
     ) -> None:
-        self._events = event_publisher
-        self._snapshot_interval = snapshot_interval
-        self._last_values: dict[str, PointValue] = {}
+        self._events, self._snapshot_interval = event_publisher, snapshot_interval
+        self._sync_interval = sync_interval
         self._task: asyncio.Task | None = None
-        self._device_service = None
+        self._device_service: DeviceService | None = None
+        self.error: str | None = None
 
-    def set_device_service(self, device_service: object) -> None:
+    def set_device_service(self, device_service: DeviceService) -> None:
         self._device_service = device_service
 
     async def start(self) -> None:
-        self._task = asyncio.create_task(self._snapshot_loop())
-        logger.info("Telemetry service started (interval=%ss)", self._snapshot_interval)
+        if self._task is None:
+            self._task = asyncio.create_task(self._run(), name="telemetry")
 
     async def stop(self) -> None:
         if self._task:
@@ -36,52 +38,28 @@ class TelemetryService:
                 await self._task
             except asyncio.CancelledError:
                 pass
-        logger.info("Telemetry service stopped")
+            self._task = None
 
-    async def check_cov(self, device_id: int, point_name: str, value: PointValue, cov_increment: float) -> None:
-        key = f"{device_id}/{point_name}"
-        old = self._last_values.get(key)
-        if old is None:
-            self._last_values[key] = value
-            return
-        if isinstance(value, (int, float)) and isinstance(old, (int, float)):
-            if cov_increment > 0 and abs(float(value) - float(old)) >= cov_increment:
-                self._last_values[key] = value
-                await self._events.publish(
-                    PointValueChanged(
-                        device_id=device_id,
-                        point_name=point_name,
-                        old_value=old,
-                        new_value=value,
-                    )
-                )
-        elif value != old:
-            self._last_values[key] = value
-            await self._events.publish(
-                PointValueChanged(
-                    device_id=device_id,
-                    point_name=point_name,
-                    old_value=old,
-                    new_value=value,
-                )
-            )
-
-    async def _snapshot_loop(self) -> None:
+    async def _run(self) -> None:
+        loop = asyncio.get_running_loop()
+        next_snapshot = loop.time() + self._snapshot_interval
         while True:
-            await asyncio.sleep(self._snapshot_interval)
-            if not self._device_service:
-                continue
             try:
-                devices = self._device_service.get_all_in_memory_devices()
-                for device in devices:
-                    points_data = {}
-                    for point in device.points:
-                        points_data[point.object_name] = point.present_value
-                    await self._events.publish(
-                        TelemetrySnapshotTaken(
-                            device_id=device.device_id,
-                            points=points_data,
-                        )
-                    )
-            except Exception as e:
-                logger.error("Telemetry snapshot error: %s", e)
+                if self._device_service is None:
+                    raise RuntimeError("Device service not configured")
+                devices = await self._device_service.list_devices()
+                if loop.time() >= next_snapshot:
+                    for device in devices:
+                        if device.status == DeviceStatus.ONLINE:
+                            await self._events.publish(
+                                TelemetrySnapshotTaken(
+                                    device_id=device.device_id,
+                                    points={p.object_name: p.present_value for p in device.points},
+                                )
+                            )
+                    next_snapshot = loop.time() + self._snapshot_interval
+                self.error = None
+            except Exception as exc:
+                self.error = str(exc)
+                logger.exception("Telemetry synchronization failed")
+            await asyncio.sleep(self._sync_interval)

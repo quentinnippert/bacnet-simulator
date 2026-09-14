@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from bacnet_lab.domain.enums import AlarmSeverity, DeviceStatus, EventType, ScenarioStatus
 from bacnet_lab.domain.value_objects import PointValue
@@ -10,7 +10,7 @@ from bacnet_lab.domain.value_objects import PointValue
 @dataclass
 class DomainEvent:
     event_type: EventType
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -58,6 +58,7 @@ class TelemetrySnapshotTaken(DomainEvent):
 @dataclass
 class ScenarioLifecycleChanged(DomainEvent):
     scenario_id: str = ""
+    error: str | None = None
     new_status: ScenarioStatus = ScenarioStatus.IDLE
     event_type: EventType = field(default=EventType.SCENARIO_STARTED, init=False)
 
@@ -66,3 +67,5 @@ class ScenarioLifecycleChanged(DomainEvent):
             self.event_type = EventType.SCENARIO_STARTED
         elif self.new_status in (ScenarioStatus.STOPPED, ScenarioStatus.IDLE):
             self.event_type = EventType.SCENARIO_STOPPED
+        elif self.new_status == ScenarioStatus.ERROR:
+            self.event_type = EventType.SCENARIO_FAILED

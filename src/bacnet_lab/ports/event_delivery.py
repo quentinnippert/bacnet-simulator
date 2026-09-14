@@ -9,3 +9,6 @@ from bacnet_lab.domain.models.event import ReplicationEvent
 class EventDeliveryPort(ABC):
     @abstractmethod
     async def deliver(self, event: ReplicationEvent, endpoint: OutboundEndpoint) -> bool: ...
+
+    async def close(self) -> None:
+        pass

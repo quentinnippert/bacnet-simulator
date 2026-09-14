@@ -1,0 +1,10 @@
+{% for ep in endpoints %}
+<article>
+    <header><strong>{{ ep.url }}</strong><span>{{ 'enabled' if ep.enabled else 'disabled' }}</span></header>
+    <p>Event types: {{ ep.event_types|join(', ') }} — Failures: {{ ep.failure_count }}</p>
+    <footer>
+        <form data-api="/api/endpoints/{{ ep.id }}/test"><button type="submit">Test</button></form>
+        <form data-api="/api/endpoints/{{ ep.id }}" data-method="DELETE"><button type="submit" class="secondary">Delete</button></form>
+    </footer>
+</article>
+{% else %}<p>No webhook endpoints configured.</p>{% endfor %}

@@ -16,8 +16,7 @@ class InProcessEventPublisher(EventPublisherPort):
         self._handlers.append(handler)
 
     async def publish(self, event: DomainEvent) -> None:
+        # Recording failures must reach the caller; network delivery is handled
+        # independently by the durable outbox worker.
         for handler in self._handlers:
-            try:
-                await handler(event)
-            except Exception as e:
-                logger.error("Event handler error for %s: %s", event.event_type, e)
+            await handler(event)

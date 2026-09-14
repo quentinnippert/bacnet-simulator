@@ -23,8 +23,11 @@ def test_device_status_changed():
 
 def test_alarm_raised():
     event = AlarmRaised(
-        alarm_id="abc", device_id=1001, point_name="test",
-        severity=AlarmSeverity.HIGH, message="too hot",
+        alarm_id="abc",
+        device_id=1001,
+        point_name="test",
+        severity=AlarmSeverity.HIGH,
+        message="too hot",
     )
     assert event.event_type == EventType.ALARM_RAISED
 

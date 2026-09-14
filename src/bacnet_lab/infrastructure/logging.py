@@ -8,5 +8,4 @@ def setup_logging(level: str = "INFO") -> None:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         stream=sys.stdout,
     )
-    logging.getLogger("BAC0").setLevel(logging.WARNING)
     logging.getLogger("bacpypes3").setLevel(logging.WARNING)

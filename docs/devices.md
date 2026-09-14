@@ -1,22 +1,20 @@
 # Devices
 
-BACnet Lab simulates 7 HVAC devices with ~50 BACnet points. Each device runs on a dedicated UDP port and is fully discoverable by BACnet clients on the same network.
+BACnet Lab simulates 7 HVAC devices with 44 BACnet points. Default devices use separate UDP ports and directed discovery.
 
 ## Device Overview
 
 | Device | ID | UDP Port | Points | Location |
 |--------|----|----------|--------|----------|
 | AHU-01 | 1001 | 47808 | 12 | Main Building |
-| FCU-01 | 2001 | 47809 | 7 | Zone 1 (Office North) |
-| FCU-02 | 2002 | 47810 | 7 | Zone 2 (Office South) |
-| TSTAT-01 | 3001 | 47811 | 6 | Lobby |
-| ZC-01 | 4001 | 47812 | 7 | Open Plan Area |
-| OAT-01 | 5001 | 47813 | 2 | Outdoor |
-| CO2-01 | 5002 | 47814 | 3 | Conference Room |
+| FCU-01 | 2001 | 47810 | 7 | Zone 1 (Office North) |
+| FCU-02 | 2002 | 47811 | 7 | Zone 2 (Office South) |
+| TSTAT-01 | 3001 | 47813 | 6 | Lobby |
+| ZC-01 | 4001 | 47814 | 7 | Open Plan Area |
+| OAT-01 | 5001 | 47812 | 2 | Outdoor |
+| CO2-01 | 5002 | 47809 | 3 | Conference Room |
 
 ## AHU-01 — Air Handling Unit
-
-The main air handling unit with supply/return/mixed air temperature monitoring, valve control, fan management, and duct pressure regulation.
 
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
@@ -35,8 +33,6 @@ The main air handling unit with supply/return/mixed air temperature monitoring, 
 
 ## FCU-01 — Fan Coil Unit Zone 1
 
-Fan coil unit serving the north office zone with room temperature control.
-
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
 | FCU-01/RoomTemp | analogInput | Room temperature | 23.0 | degreesCelsius |
@@ -48,8 +44,6 @@ Fan coil unit serving the north office zone with room temperature control.
 | FCU-01/FanEnable | binaryOutput | Fan enable command | true | — |
 
 ## FCU-02 — Fan Coil Unit Zone 2
-
-Fan coil unit serving the south office zone. Same point structure as FCU-01.
 
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
@@ -63,8 +57,6 @@ Fan coil unit serving the south office zone. Same point structure as FCU-01.
 
 ## TSTAT-01 — Thermostat
 
-Lobby thermostat with temperature/humidity monitoring and dual setpoints.
-
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
 | TSTAT-01/SpaceTemp | analogInput | Space temperature | 22.0 | degreesCelsius |
@@ -75,8 +67,6 @@ Lobby thermostat with temperature/humidity monitoring and dual setpoints.
 | TSTAT-01/Occupancy | binaryInput | Space occupancy | true | — |
 
 ## ZC-01 — Zone Controller
-
-VAV zone controller for the open plan area with airflow and damper control.
 
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
@@ -90,8 +80,6 @@ VAV zone controller for the open plan area with airflow and damper control.
 
 ## OAT-01 — Outdoor Temperature Sensor
 
-Outdoor environmental sensor.
-
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
 | OAT-01/OutdoorTemp | analogInput | Outdoor air temperature | 15.0 | degreesCelsius |
@@ -99,49 +87,51 @@ Outdoor environmental sensor.
 
 ## CO2-01 — CO2 Sensor
 
-Conference room CO2 sensor with demand ventilation setpoint.
-
 | Point Name | Object Type | Description | Default | Units |
 |------------|-------------|-------------|---------|-------|
 | CO2-01/CO2Level | analogInput | CO2 concentration | 450.0 | partsPerMillion |
 | CO2-01/CO2Setpoint | analogValue | CO2 setpoint for demand ventilation | 800.0 | partsPerMillion |
 | CO2-01/HighCO2Alarm | binaryValue | High CO2 alarm | false | — |
 
-## Custom Devices
+## Custom devices
 
-Devices are defined as YAML files in `config/devices/`. To add a new device, create a YAML file following this format:
+Add a YAML file in `config/devices/`, then restart:
 
 ```yaml
-device_id: 6001          # Unique BACnet device instance number
-name: "MY-DEVICE-01"     # Device name
+device_id: 6001
+name: "MY-DEVICE-01"
 description: "My custom device"
 points:
-  - object_type: analogInput      # analogInput, analogOutput, analogValue,
-    object_instance: 1             # binaryInput, binaryOutput, binaryValue,
-    object_name: "MY-DEVICE-01/Temp"  # multiStateInput, multiStateOutput, multiStateValue
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "MY-DEVICE-01/Temp"
     description: "Temperature"
     present_value: 22.0
-    units: "degreesCelsius"        # BACnet engineering units name
-    cov_increment: 0.5             # Optional: COV reporting increment
+    units: "degreesCelsius"
+    cov_increment: 0.5
 ```
 
-### Supported Object Types
+| Family | Input | Output | Value | YAML value |
+|---|---|---|---|---|
+| Analog | `analogInput` (AI) | `analogOutput` (AO) | `analogValue` (AV) | Finite 32-bit Real; percentages 0–100 |
+| Binary | `binaryInput` (BI) | `binaryOutput` (BO) | `binaryValue` (BV) | `true` / `false` |
+| Multistate | `multiStateInput` (MSI) | `multiStateOutput` (MSO) | `multiStateValue` (MSV) | Integer `1..len(state_text)` |
 
-| Type | BACnet Type | Writable |
-|------|-------------|----------|
-| `analogInput` | AI | No (sensor value) |
-| `analogOutput` | AO | Yes (actuator command) |
-| `analogValue` | AV | Yes (setpoint/config) |
-| `binaryInput` | BI | No (sensor state) |
-| `binaryOutput` | BO | Yes (on/off command) |
-| `binaryValue` | BV | Yes (boolean config) |
-| `multiStateInput` | MSI | No (multi-state sensor) |
-| `multiStateOutput` | MSO | Yes (multi-state command) |
-| `multiStateValue` | MSV | Yes (multi-state config) |
+Multistate example fields:
 
-### Tips
+```yaml
+state_text: ["Off", "Cool", "Heat", "Auto"]
+present_value: 4
+```
 
-- Each device gets its own UDP port. Ports are assigned sequentially starting from `port_start` (default: 47808) in the order devices are loaded.
-- Use the `DeviceName/PointName` naming convention for `object_name` to keep points easily identifiable.
-- The `cov_increment` field is optional and controls BACnet Change of Value (COV) reporting sensitivity.
-- Restart the application after adding or modifying device files.
+| Configuration rule | Requirement |
+|---|---|
+| Identity | Unique device IDs/names; unique point names and type/instance pairs within a device; unique effective addresses |
+| Instances | 0..4194302 |
+| Naming / units | Prefer `DeviceName/PointName`; use BACnet engineering-unit names |
+| COV | Optional `cov_increment` sets the real analog object's reporting threshold |
+| Default ports | Sequential from 47808, in filename order; [explicit addresses](configuration.md#network-topology) avoid reassignment |
+| Restart | YAML replaces inventory/initial values; stale devices/points are removed from SQLite |
+| Writes | Outputs/values use priorities; native input writes require Out_Of_Service; HTTP drives the simulated source |
+
+The API returns effective values. Defaults are loopback-only; broadcasts do not cross ports. [Full protocol rules](bacnet-profile.md).

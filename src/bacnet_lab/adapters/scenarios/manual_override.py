@@ -1,47 +1,36 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 
 from bacnet_lab.adapters.scenarios.base import BaseScenario
 from bacnet_lab.domain.models.scenario import ScenarioParameter
-
-logger = logging.getLogger(__name__)
 
 
 class ManualOverrideScenario(BaseScenario):
     id = "manual_override"
     name = "Manual Override"
-    description = "Overrides a specific point to a fixed value, then releases after a duration."
+    description = "Hold a point using priority 8, then relinquish it (or restore an input)."
 
     def default_parameters(self) -> list[ScenarioParameter]:
         return [
-            ScenarioParameter(name="device_id", description="Target device ID", default=1001),
-            ScenarioParameter(name="point_name", description="Point name to override", default="AHU-01/CoolingValve"),
-            ScenarioParameter(name="override_value", description="Override value", default=100.0),
-            ScenarioParameter(name="original_value", description="Original value to restore", default=45.0),
-            ScenarioParameter(name="hold_duration", description="Hold duration (s)", default=30),
+            ScenarioParameter("device_id", "Target device ID", 1001),
+            ScenarioParameter("point_name", "Target point", "AHU-01/CoolingValve"),
+            ScenarioParameter("override_value", "Value to force", 100.0),
+            ScenarioParameter("hold_duration", "Duration in seconds", 30),
         ]
 
+    def validate(self) -> None:
+        self.require_point(
+            self.parameter("device_id"),
+            self.parameter("point_name"),
+            self.parameter("override_value"),
+        )
+
     async def run(self) -> None:
-        device_id = int(self._parameters[0].value)
-        point_name = str(self._parameters[1].value)
-        override_val = float(self._parameters[2].value)
-        original_val = float(self._parameters[3].value)
-        hold_dur = float(self._parameters[4].value)
-
-        # Apply override
-        try:
-            await self._device_service.write_point_by_name(device_id, point_name, override_val)
-        except Exception as e:
-            logger.error("Manual override failed for %s: %s", point_name, e)
-            return
-
-        try:
-            await asyncio.sleep(hold_dur)
-        finally:
-            # Always release override, even on cancellation
-            try:
-                await self._device_service.write_point_by_name(device_id, point_name, original_val)
-            except Exception as e:
-                logger.error("Failed to release override for %s: %s", point_name, e)
+        async with self._device_service.override(
+            self.parameter("device_id"),
+            self.parameter("point_name"),
+            self.parameter("override_value"),
+            self.id,
+        ):
+            await asyncio.sleep(self.parameter("hold_duration"))

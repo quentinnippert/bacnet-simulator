@@ -26,12 +26,12 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
             try:
                 decoded = base64.b64decode(auth[6:]).decode("utf-8")
                 provided_user, provided_pass = decoded.split(":", 1)
-                user_ok = secrets.compare_digest(provided_user, self._username)
-                pass_ok = secrets.compare_digest(provided_pass, self._password)
-                if user_ok and pass_ok:
-                    return await call_next(request)
-            except Exception:
-                pass
+                user_ok = secrets.compare_digest(provided_user.encode(), self._username.encode())
+                pass_ok = secrets.compare_digest(provided_pass.encode(), self._password.encode())
+            except (ValueError, UnicodeError):
+                user_ok = pass_ok = False
+            if user_ok and pass_ok:
+                return await call_next(request)
 
         return Response(
             status_code=401,

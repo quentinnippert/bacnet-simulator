@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from bacnet_lab.adapters.scenarios.base import BaseScenario
+from bacnet_lab.domain.errors import NotFoundError
 from bacnet_lab.domain.models.scenario import Scenario
 from bacnet_lab.ports.scenario_runner import ScenarioRunnerPort
 
@@ -20,14 +21,14 @@ class ScenarioRegistry(ScenarioRunnerPort):
     async def start(self, scenario_id: str, params: dict | None = None) -> Scenario:
         scenario = self._scenarios.get(scenario_id)
         if not scenario:
-            raise ValueError(f"Unknown scenario: {scenario_id}")
+            raise NotFoundError(f"Unknown scenario: {scenario_id}")
         await scenario.start(params)
         return scenario.to_domain()
 
     async def stop(self, scenario_id: str) -> Scenario:
         scenario = self._scenarios.get(scenario_id)
         if not scenario:
-            raise ValueError(f"Unknown scenario: {scenario_id}")
+            raise NotFoundError(f"Unknown scenario: {scenario_id}")
         await scenario.stop()
         return scenario.to_domain()
 
@@ -37,3 +38,13 @@ class ScenarioRegistry(ScenarioRunnerPort):
     def get_scenario(self, scenario_id: str) -> Scenario | None:
         s = self._scenarios.get(scenario_id)
         return s.to_domain() if s else None
+
+    async def stop_all(self) -> None:
+        errors = []
+        for scenario in self._scenarios.values():
+            try:
+                await scenario.stop()
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            raise ExceptionGroup("Scenario shutdown failed", errors)

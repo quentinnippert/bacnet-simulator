@@ -2,22 +2,8 @@
 {% block title %}Dashboard — BACnet Lab{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
-<div class="grid">
-    <article>
-        <header>Devices</header>
-        <p><strong>{{ devices|length }}</strong> devices online</p>
-        <footer><a href="/ui/devices" role="button" class="outline">View Devices</a></footer>
-    </article>
-    <article>
-        <header>Scenarios</header>
-        <p><strong>{{ active_scenarios }}</strong> / {{ scenarios_count }} running</p>
-        <footer><a href="/ui/scenarios" role="button" class="outline">View Scenarios</a></footer>
-    </article>
-    <article>
-        <header>Alarms</header>
-        <p><strong>{{ alarm_count }}</strong> active alarms</p>
-        <footer><a href="/ui/events" role="button" class="outline">View Events</a></footer>
-    </article>
+<div hx-get="/ui/partials/summary" hx-trigger="every 3s" hx-swap="innerHTML">
+{% include "partials/summary.html" %}
 </div>
 
 <h2>Devices Overview</h2>

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from bacnet_lab.domain.enums import AlarmSeverity, EventType
 
@@ -22,7 +22,7 @@ class Alarm:
     point_name: str
     severity: AlarmSeverity
     message: str
-    raised_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    raised_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     cleared_at: datetime | None = None
 
     @property

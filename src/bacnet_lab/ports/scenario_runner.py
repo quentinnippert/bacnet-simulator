@@ -7,6 +7,9 @@ from bacnet_lab.domain.models.scenario import Scenario
 
 class ScenarioRunnerPort(ABC):
     @abstractmethod
+    async def stop_all(self) -> None: ...
+
+    @abstractmethod
     async def start(self, scenario_id: str, params: dict | None = None) -> Scenario: ...
 
     @abstractmethod

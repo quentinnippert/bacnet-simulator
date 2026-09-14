@@ -24,3 +24,4 @@ class Scenario:
     description: str
     status: ScenarioStatus = ScenarioStatus.IDLE
     parameters: list[ScenarioParameter] = field(default_factory=list)
+    error: str | None = None

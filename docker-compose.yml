@@ -2,8 +2,15 @@ services:
   bacnet-lab:
     build: .
     network_mode: host
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      BACNET_LAB_DB_PATH: /app/data/bacnet_lab.db
     volumes:
-      - ./data:/app/data
+      - bacnet-data:/app/data
       - ./config:/app/config:ro
     restart: unless-stopped
+    stop_grace_period: 30s
+volumes:
+  bacnet-data:
