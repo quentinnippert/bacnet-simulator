@@ -46,6 +46,7 @@ article header {
 .scenario-device_offline { --scenario-accent: #416ca3; }
 .scenario-manual_override { --scenario-accent: #96721e; }
 .scenario-cleanroom_ahu { --scenario-accent: #147d78; }
+.scenario-seal_ahu { --scenario-accent: #bd6048; }
 
 .scenario-visual {
     margin: 1rem 0;
@@ -152,6 +153,45 @@ article header {
 .cleanroom-controller-label { fill: #34443b !important; font-size: 10px !important; font-weight: 700 !important; }
 .cleanroom-feedback { fill: none; stroke: #416ca3; stroke-dasharray: 4 4; stroke-width: 1.5; }
 .cleanroom-interlock { fill: #b42318 !important; font-size: 9px !important; font-weight: 700 !important; }
+
+.seal-unit { fill: #e8eeea; stroke: #809188; stroke-width: 1.5; }
+.seal-air-path { fill: none; stroke: #21865b; stroke-width: 3; stroke-dasharray: 9 7; }
+.seal-air-path marker path { fill: #21865b; }
+.seal-component { stroke: #66776e; stroke-width: 1.5; }
+.seal-damper { fill: #fff; }
+.seal-blade { stroke: #147d78; stroke-width: 2; }
+.seal-filter { fill: #f5f7f5; }
+.seal-filter-lines { fill: none; stroke: #75867d; stroke-width: 1.5; }
+.seal-coil { fill: #f5e1dc; }
+.seal-coil-lines { fill: none; stroke: #bd6048; stroke-width: 1.5; }
+.seal-fan-case, .seal-pump-case { fill: #fff; stroke: #66776e; stroke-width: 2; }
+.seal-fan-blades, .seal-pump-blades { fill: none; stroke: #416ca3; stroke-linecap: round; stroke-width: 3; }
+.seal-water-path { fill: none; stroke: #bd6048; stroke-width: 2.5; }
+.seal-valve { fill: #fff; stroke: #bd6048; stroke-width: 1.5; }
+.seal-valve-mark { fill: none; stroke: #bd6048; stroke-width: 1.5; }
+.seal-sensor { fill: #fff; stroke: #96721e; stroke-width: 2; }
+.seal-sensor-label { fill: #536159 !important; font-size: 8px !important; font-weight: 600 !important; }
+.seal-heading { fill: #34443b !important; font-size: 10px !important; font-weight: 700 !important; }
+.seal-controller { fill: #fff; stroke: #416ca3; stroke-width: 1.5; }
+.seal-controller-label { fill: #34443b !important; font-size: 10px !important; font-weight: 700 !important; }
+.seal-feedback { fill: none; stroke: #416ca3; stroke-dasharray: 4 4; stroke-width: 1.5; }
+.seal-interlock { fill: #b42318 !important; font-size: 8px !important; font-weight: 700 !important; }
+
+.scenario-seal_ahu.is-running .seal-air-path,
+.scenario-seal_ahu.is-running .seal-water-path {
+    animation: scenario-flow 2.5s linear infinite;
+}
+
+.scenario-seal_ahu.is-running .seal-fan-blades,
+.scenario-seal_ahu.is-running .seal-pump-blades {
+    animation: scenario-pulse 1.6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.scenario-seal_ahu.is-running .seal-sensor:last-of-type {
+    animation: scenario-pulse 1.6s ease-in-out infinite;
+}
 
 .scenario-cleanroom_ahu.is-running .cleanroom-air-path {
     animation: scenario-flow 2.5s linear infinite;

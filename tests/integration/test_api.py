@@ -205,7 +205,7 @@ async def test_get_device(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["name"] == "AHU-01"
-    assert len(data["points"]) == 14
+    assert len(data["points"]) == 28
     point_names = {point["object_name"] for point in data["points"]}
     assert "AHU-01/ReturnAirTemp" not in point_names
     assert "AHU-01/MixedAirTemp" not in point_names

@@ -10,7 +10,7 @@ defaults → config/settings.yaml → .env → process environment
 
 | Environment variable | Default | Purpose |
 |---|---|---|
-| `BACNET_LAB_HTTP_HOST` | `127.0.0.1` | HTTP bind interface |
+| `BACNET_LAB_HTTP_HOST` | `auto` in bundled YAML; `127.0.0.1` if omitted | HTTP bind interface, or `auto` to use the address selected by the system's default IPv4 route |
 | `BACNET_LAB_HTTP_PORT` | `8080` | HTTP port |
 | `BACNET_LAB_BACNET_IP` | `127.0.0.1` | Concrete IPv4 interface, or `auto` to use the address selected by the system's default IPv4 route |
 | `BACNET_LAB_BACNET_PREFIX` | `32` | IPv4 network prefix, 0–32 |
@@ -36,7 +36,7 @@ BACNET_LAB_BACNET_IP=192.168.1.100
 BACNET_LAB_BACNET_PREFIX=24
 ```
 
-Set `BACNET_LAB_BACNET_IP=auto` to select the local IPv4 address chosen by the system's default route at startup. This only selects the address; set the prefix to match that interface's subnet. On systems with multiple adapters or VPNs, use an explicit IP to select the intended interface.
+Set `BACNET_LAB_HTTP_HOST=auto` or `BACNET_LAB_BACNET_IP=auto` to select the local IPv4 address chosen by the system's default route at startup. The bundled `config/settings.yaml` uses `auto` for the HTTP host, so the web server follows the active adapter. Set `BACNET_LAB_HTTP_HOST=127.0.0.1` for local-only web access, or provide an explicit interface IP when the default route is not the intended network. For BACnet, set the prefix to match the selected interface's subnet. On systems with multiple adapters or VPNs, use explicit IPs to select the intended interfaces.
 
 The default YAML filenames are loaded alphabetically:
 

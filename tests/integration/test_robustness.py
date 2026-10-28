@@ -12,6 +12,7 @@ from bacnet_lab.adapters.scenarios.cleanroom_ahu import CleanroomAhuScenario
 from bacnet_lab.adapters.scenarios.device_offline import DeviceOfflineScenario
 from bacnet_lab.adapters.scenarios.hvac_day_cycle import HvacDayCycleScenario
 from bacnet_lab.adapters.scenarios.manual_override import ManualOverrideScenario
+from bacnet_lab.adapters.scenarios.seal_ahu import SealAhuScenario
 from bacnet_lab.domain.enums import DeviceStatus, EventType, ScenarioStatus
 from tests.integration.test_api import make_test_client
 
@@ -25,6 +26,7 @@ async def lab():
             ManualOverrideScenario,
             HvacDayCycleScenario,
             CleanroomAhuScenario,
+            SealAhuScenario,
             DeviceOfflineScenario,
         ):
             c.scenario_service._runner.register(cls(c.device_service, c.event_publisher))
@@ -137,6 +139,41 @@ async def test_cleanroom_scenario_controls_pressure_and_supply_fan(lab):
     assert c.device_service.point(1001, "AHU-01/FanSpeed").present_value == 0
     assert c.device_service.point(1001, "AHU-01/OutdoorAirDamper").present_value == 0
     await client.post("/api/scenarios/cleanroom_ahu/stop")
+
+
+@pytest.mark.asyncio
+async def test_seal_ahu_simulates_heating_interlocks_and_latched_frost_alarm(lab):
+    client, c = lab
+    response = await client.post(
+        "/api/scenarios/seal_ahu/start",
+        json={"params": {"interval": 0.02, "simulation_month": 1}},
+    )
+    assert response.status_code == 200
+    await until(
+        lambda: c.device_service.point(1001, "AHU-01/HeatingPumpRunStatus").present_value
+        and c.device_service.point(1001, "AHU-01/FanRunStatus").present_value
+    )
+    assert c.device_service.point(1001, "AHU-01/SupplyAirTempSetpoint").present_value == 20
+    assert c.device_service.point(1001, "AHU-01/ReturnWaterMinimumSetpoint").present_value == 12
+    assert c.device_service.point(1001, "AHU-01/HeatingValve").present_value > 0
+
+    await c.device_service.write_point_by_name(1001, "AHU-01/ExternalStop", True)
+    await until(
+        lambda: not c.device_service.point(1001, "AHU-01/FanRunStatus").present_value
+        and not c.device_service.point(1001, "AHU-01/HeatingPumpRunStatus").present_value
+    )
+    await client.post("/api/scenarios/seal_ahu/stop")
+
+    await c.device_service.write_point_by_name(1001, "AHU-01/ExternalStop", False)
+    await c.device_service.write_point_by_name(1001, "AHU-01/ReturnWaterTemp", 4.0)
+    response = await client.post(
+        "/api/scenarios/seal_ahu/start", json={"params": {"interval": 0.02}}
+    )
+    assert response.status_code == 200
+    await until(lambda: c.device_service.point(1001, "AHU-01/FreezeProtectionAlarm").present_value)
+    assert not c.device_service.point(1001, "AHU-01/FanRunStatus").present_value
+    assert c.device_service.point(1001, "AHU-01/HeatingValve").present_value > 0
+    await client.post("/api/scenarios/seal_ahu/stop")
 
 
 @pytest.mark.asyncio
@@ -311,8 +348,16 @@ async def test_ui_refresh_keeps_controls_and_all_pages_render(lab):
     client, _ = lab
     page = (await client.get("/ui/devices/1001")).text
     partial = (await client.get("/ui/partials/points/1001")).text
-    assert page.count('data-method="PUT"') == partial.count('data-method="PUT"') == 6
+    assert page.count('data-method="PUT"') == partial.count('data-method="PUT"') == 9
     assert 'data-kind="boolean"' in partial
+    assert all(tag not in page for tag in ("GT81", "GM3", "GF42", "MQ41", "SO1", "P1"))
+    scenario_markup = (await client.get("/ui/partials/scenarios")).text
+    assert 'class="seal-air-path"' in scenario_markup
+    assert "AHU with supply air only" in scenario_markup
+    assert "SUPPLY TEMP" in scenario_markup
+    assert "RETURN TEMP" in scenario_markup
+    assert all(tag not in scenario_markup for tag in ("TF1", "GT81", "LHBG01"))
+    assert "visual-fallback" not in scenario_markup
     for path in ["/ui/scenarios", "/ui/events", "/ui/endpoints", "/ui/partials/endpoints"]:
         assert (await client.get(path)).status_code == 200
     assert "https://unpkg.com" not in page

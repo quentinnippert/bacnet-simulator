@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -12,6 +13,16 @@ from bacnet_lab.domain.enums import ScenarioStatus
 router = APIRouter(prefix="/ui", tags=["web"])
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_COMPONENT_TAG = re.compile(r"\b(?:GT|GM|GF|MQ|SO|TF|SV|P)\d+\b")
+
+
+def _hide_component_tags(description: str) -> str:
+    description = re.sub(r"\s*\((?:GT|GM|GF|MQ|SO|TF|SV|P)\d+\)", "", description)
+    description = _COMPONENT_TAG.sub("", description)
+    return re.sub(r"\s{2,}", " ", description).strip()
+
+
+templates.env.filters["hide_component_tags"] = _hide_component_tags
 
 
 @router.get("", response_class=HTMLResponse)

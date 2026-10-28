@@ -92,3 +92,87 @@ points:
     present_value: 100.0
     units: "percent"
     cov_increment: 1.0
+  - object_type: analogInput
+    object_instance: 9
+    object_name: "AHU-01/ReturnWaterTemp"
+    description: "Heating coil return water temperature"
+    present_value: 20.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: analogInput
+    object_instance: 10
+    object_name: "AHU-01/OutdoorAirHumidity"
+    description: "Outdoor air relative humidity"
+    present_value: 70.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogInput
+    object_instance: 11
+    object_name: "AHU-01/IntakeAirflow"
+    description: "Intake airflow as a percentage of design flow"
+    present_value: 0.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogInput
+    object_instance: 12
+    object_name: "AHU-01/HeatingPower"
+    description: "Estimated heating power from the energy meter model"
+    present_value: 0.0
+    units: "kilowatts"
+    cov_increment: 0.1
+  - object_type: analogInput
+    object_instance: 13
+    object_name: "AHU-01/HeatingEnergy"
+    description: "Accumulated estimated heating energy"
+    present_value: 0.0
+    units: "kilowattHours"
+    cov_increment: 0.1
+  - object_type: analogValue
+    object_instance: 2
+    object_name: "AHU-01/ReturnWaterTempSetpoint"
+    description: "Heating coil return temperature target while stopped"
+    present_value: 20.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: analogValue
+    object_instance: 3
+    object_name: "AHU-01/ReturnWaterMinimumSetpoint"
+    description: "Minimum heating coil return temperature while operating"
+    present_value: 12.0
+    units: "degreesCelsius"
+    cov_increment: 0.5
+  - object_type: binaryInput
+    object_instance: 4
+    object_name: "AHU-01/ServiceSwitch"
+    description: "Service switch status"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 5
+    object_name: "AHU-01/ExternalStop"
+    description: "External stop signal"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 6
+    object_name: "AHU-01/HeatingPumpFault"
+    description: "Heating circulation pump fault status"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 7
+    object_name: "AHU-01/FreezeProtectionAlarm"
+    description: "Latched heating coil frost protection alarm"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 8
+    object_name: "AHU-01/ReturnWaterControlActive"
+    description: "Return water temperature controller override active"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 9
+    object_name: "AHU-01/HeatingPumpRunStatus"
+    description: "Heating circulation pump run feedback"
+    present_value: false
+  - object_type: binaryOutput
+    object_instance: 2
+    object_name: "AHU-01/HeatingPumpEnable"
+    description: "Heating circulation pump command"
+    present_value: false

@@ -41,6 +41,7 @@ In PowerShell, use `curl.exe` in place of `curl` if `curl` resolves to the Power
 |---|---|---|
 | `hvac_day_cycle` | Exercise normal changing HVAC values across several devices | Repeats an illustrative, compressed 24-hour day/night profile. Outdoor temperature, setpoints, valves, fan speed, occupancy, damper position, and CO2 change on each update. |
 | `cleanroom_ahu` | Demonstrate the supply-only cleanroom sequence in the AHU diagram | Modulates supply fan speed around the room pressure setpoint, controls supply temperature with coil valves, opens the outdoor-air damper, estimates fan power, and shuts down on fan fault or fire alarm. |
+| `seal_ahu` | Simulate the documented SEAL LHBG01 air handling unit | Runs the weekday fan schedule and models the TF1 supply fan, P1 heating pump, SV21 heating valve, GT11/GT81 temperatures, summer/winter pump logic, return-water protection, latched frost shutdown, outdoor humidity/airflow, and estimated MQ41 heat energy. |
 | `alarm_cycle` | Test application alarm handling and event/webhook delivery | Forces a selected point to the high temperature, raises an alarm, restores the prior point state, clears the alarm, then repeats after a clear interval. |
 | `device_offline` | Test client behavior when a device stops responding | Repeatedly takes one device offline and brings it online. Other devices remain available. |
 | `manual_override` | Test a temporary command or priority handling | Holds a selected point at a value, then restores its prior state after the hold duration. This runs once. |
@@ -55,6 +56,7 @@ Durations and update intervals are seconds and must be between **0.01 and 86400*
 |---|---|---|
 | `hvac_day_cycle` | `cycle_seconds=120`, `interval=3`, `fan_rated_power_kw=10.0` | Repeating compressed 24h cycle; estimates AHU supply fan power from fan speed |
 | `cleanroom_ahu` | `interval=1`, `room_pressure_setpoint_pa=15.0`, `supply_air_setpoint_c=18.0`, `outdoor_air_damper_pct=100.0`, `fan_rated_power_kw=10.0` | Supply-only cleanroom control sequence |
+| `seal_ahu` | `interval=1`, `day_cycle_seconds=120`, `simulation_start_hour=7`, `simulation_weekday=0`, `simulation_month=1`, `outdoor_air_temp_c=8`, `outdoor_air_humidity_pct=70`, `supply_air_setpoint_c=20`, `fan_speed_setpoint_pct=50`, `minimum_return_water_temp_c=12`, `stopped_return_water_temp_c=20`, `freeze_limit_c=5`, `startup_valve_boost_pct=50`, `summer_start_month=5`, `winter_start_month=10`, `fan_rated_power_kw=10`, `heating_capacity_kw=100` | Document-based LHBG01 sequence; schedule and setpoints can be supplied at scenario start |
 | `alarm_cycle` | `device_id=1001`, `point_name=AHU-01/SupplyAirTemp`, `high_temp=35.0`, `alarm_duration=15`, `clear_duration=20` | Hold temperature → raise application alarm → clear and restore → repeat |
 | `device_offline` | `device_id=2001`, `offline_duration=15`, `online_duration=30` | Close/reopen target UDP sockets; other devices continue |
 | `manual_override` | `device_id=1001`, `point_name=AHU-01/CoolingValve`, `override_value=100.0`, `hold_duration=30` | One hold, then restore |
@@ -62,6 +64,8 @@ Durations and update intervals are seconds and must be between **0.01 and 86400*
 The HVAC cycle calculates `AHU-01/ElectricalPower` in kW with `fan_rated_power_kw × (fan_speed / 100)^3`. The default 10 kW fan rating is illustrative and can be changed when starting the scenario. This estimates supply-fan power only; it does not calculate total AHU electrical demand or accumulated energy.
 
 `cleanroom_ahu` models the diagram's typical +15 Pa room pressure setpoint, supply-air temperature control, 100% outdoor-air damper command, and fan/fire interlocks. The room pressure response and SAT response are simplified simulation dynamics, not a tuned PID loop or a physical air-handling model. Filter differential pressure is exposed for BMS alarming; the scenario does not simulate filter loading. Return-air and mixed-air points are intentionally absent from the supply-only AHU profile.
+
+`seal_ahu` uses the LHBG01 operating card and control export. It models Monday-Friday operation from 06:00 to 22:00, winter pump operation, summer pump demand from the heating valve, the Monday pump exercise window, supply-air and return-water control, service/external/fire interlocks, and a latched frost trip. The simulation month and clock are parameters so seasonal and schedule behavior can be tested without waiting for real calendar time. Its simplified temperature response and heat-meter calculations are estimates; the source documents do not provide calibrated fan curves, design airflow, or heating capacity, so `heating_capacity_kw` and `fan_rated_power_kw` are assumptions that should be replaced with project values.
 
 For example, shorten the alarm cycle for a quick test:
 

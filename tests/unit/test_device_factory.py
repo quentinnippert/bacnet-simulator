@@ -12,7 +12,11 @@ def test_load_device_from_yaml():
 
     assert device.device_id == 1001
     assert device.name == "AHU-01"
-    assert len(device.points) == 14
+    assert len(device.points) == 28
+    assert all(
+        not any(tag in point.description for tag in ("GT81", "GM3", "GF42", "MQ41", "SO1", "P1"))
+        for point in device.points
+    )
 
     supply_temp = device.get_point_by_name("AHU-01/SupplyAirTemp")
     assert supply_temp is not None

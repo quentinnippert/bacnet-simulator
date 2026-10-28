@@ -1,5 +1,5 @@
 http:
-  host: "127.0.0.1"
+  host: "auto"
   port: 8080
 bacnet:
   ip: "127.0.0.1"

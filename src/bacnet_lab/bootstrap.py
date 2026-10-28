@@ -19,6 +19,7 @@ from bacnet_lab.adapters.scenarios.device_offline import DeviceOfflineScenario
 from bacnet_lab.adapters.scenarios.hvac_day_cycle import HvacDayCycleScenario
 from bacnet_lab.adapters.scenarios.manual_override import ManualOverrideScenario
 from bacnet_lab.adapters.scenarios.registry import ScenarioRegistry
+from bacnet_lab.adapters.scenarios.seal_ahu import SealAhuScenario
 from bacnet_lab.adapters.webhook.delivery import WebhookDeliveryAdapter
 from bacnet_lab.application.device_service import DeviceService
 from bacnet_lab.application.endpoint_service import EndpointService
@@ -102,6 +103,7 @@ async def create_container(settings: AppSettings) -> Container:
     scenario_registry = ScenarioRegistry()
     scenario_registry.register(HvacDayCycleScenario(device_service, event_publisher))
     scenario_registry.register(CleanroomAhuScenario(device_service, event_publisher))
+    scenario_registry.register(SealAhuScenario(device_service, event_publisher))
     scenario_registry.register(AlarmScenario(device_service, event_publisher))
     scenario_registry.register(DeviceOfflineScenario(device_service, event_publisher))
     scenario_registry.register(ManualOverrideScenario(device_service, event_publisher))

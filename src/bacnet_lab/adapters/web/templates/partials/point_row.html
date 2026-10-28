@@ -26,7 +26,7 @@
             </form>
         {% else %}<strong>{{ point.present_value }}</strong>{% endif %}
         </td>
-        <td>{{ point.units }}</td><td>{{ point.description }}</td>
+        <td>{{ point.units }}</td><td>{{ point.description | hide_component_tags }}</td>
     </tr>
     {% endfor %}
     </tbody>
