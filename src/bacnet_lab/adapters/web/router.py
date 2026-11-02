@@ -70,8 +70,11 @@ async def device_detail(request: Request, device_id: int) -> HTMLResponse:
 async def scenarios_page(request: Request) -> HTMLResponse:
     container = get_container(request)
     scenarios = container.scenario_service.list_scenarios()
+    devices = await container.device_service.list_devices()
     return templates.TemplateResponse(
-        request=request, name="scenarios.html", context={"scenarios": scenarios}
+        request=request,
+        name="scenarios.html",
+        context={"scenarios": scenarios, "devices": devices},
     )
 
 
@@ -121,8 +124,11 @@ async def partial_point_rows(request: Request, device_id: int) -> HTMLResponse:
 async def partial_scenario_cards(request: Request) -> HTMLResponse:
     container = get_container(request)
     scenarios = container.scenario_service.list_scenarios()
+    devices = await container.device_service.list_devices()
     return templates.TemplateResponse(
-        request=request, name="partials/scenario_card.html", context={"scenarios": scenarios}
+        request=request,
+        name="partials/scenario_card.html",
+        context={"scenarios": scenarios, "devices": devices},
     )
 
 

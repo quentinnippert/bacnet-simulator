@@ -1,12 +1,12 @@
 # Devices
 
-BACnet Lab simulates 7 HVAC devices with 46 BACnet points. Default devices use separate UDP ports and directed discovery.
+BACnet Lab simulates 7 HVAC devices with 60 BACnet points. Default devices use separate UDP ports and directed discovery.
 
 ## Device Overview
 
 | Device | ID | UDP Port | Points | Location |
 |--------|----|----------|--------|----------|
-| AHU-01 | 1001 | 47808 | 14 | Positive Pressure Cleanroom |
+| AHU-01 | 1001 | 47808 | 28 | Positive Pressure Cleanroom |
 | FCU-01 | 2001 | 47810 | 7 | Zone 1 (Office North) |
 | FCU-02 | 2002 | 47811 | 7 | Zone 2 (Office South) |
 | TSTAT-01 | 3001 | 47813 | 6 | Lobby |
@@ -32,8 +32,22 @@ BACnet Lab simulates 7 HVAC devices with 46 BACnet points. Default devices use s
 | AHU-01/FanFault | binaryInput | Supply fan fault status | false | — |
 | AHU-01/FireAlarmStatus | binaryInput | Fire alarm interlock status | false | — |
 | AHU-01/SupplyFanEnable | binaryOutput | Supply fan enable command | true | — |
+| AHU-01/ReturnWaterTemp | analogInput | Heating coil return water temperature | 20.0 | degreesCelsius |
+| AHU-01/OutdoorAirHumidity | analogInput | Outdoor air relative humidity | 70.0 | percent |
+| AHU-01/IntakeAirflow | analogInput | Intake airflow as a percentage of design flow | 0.0 | percent |
+| AHU-01/HeatingPower | analogInput | Estimated heating power from the energy meter model | 0.0 | kilowatts |
+| AHU-01/HeatingEnergy | analogInput | Accumulated estimated heating energy | 0.0 | kilowattHours |
+| AHU-01/ReturnWaterTempSetpoint | analogValue | Heating coil return temperature target while stopped | 20.0 | degreesCelsius |
+| AHU-01/ReturnWaterMinimumSetpoint | analogValue | Minimum heating coil return temperature while operating | 12.0 | degreesCelsius |
+| AHU-01/ServiceSwitch | binaryInput | Service switch status | false | — |
+| AHU-01/ExternalStop | binaryInput | External stop signal | false | — |
+| AHU-01/HeatingPumpFault | binaryInput | Heating circulation pump fault status | false | — |
+| AHU-01/FreezeProtectionAlarm | binaryInput | Latched heating coil frost protection alarm | false | — |
+| AHU-01/ReturnWaterControlActive | binaryInput | Return water temperature controller override active | false | — |
+| AHU-01/HeatingPumpRunStatus | binaryInput | Heating circulation pump run feedback | false | — |
+| AHU-01/HeatingPumpEnable | binaryOutput | Heating circulation pump command | false | — |
 
-The supply-only cleanroom profile has no return-air or mixed-air sensor. `ElectricalPower` is an estimate updated by the HVAC Day/Night and Cleanroom Supply AHU scenarios using `rated_power × (fan_speed / 100)^3`. Both assume a 10 kW rated supply fan by default; change `fan_rated_power_kw` to use another rating. This is fan-only power, not total AHU or plant energy, and is not a measured value.
+The bundled AHU inventory is shared by the `cleanroom_ahu` and `seal_ahu` scenarios, so it includes their combined point set. It has no return-air or mixed-air sensor. `ElectricalPower` is an estimate updated by the HVAC Day/Night and Cleanroom Supply AHU scenarios using `rated_power × (fan_speed / 100)^3`. Both assume a 10 kW rated supply fan by default; change `fan_rated_power_kw` to use another rating. This is fan-only power, not total AHU or plant energy, and is not a measured value.
 
 ## FCU-01 — Fan Coil Unit Zone 1
 

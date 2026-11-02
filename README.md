@@ -2,7 +2,7 @@
 
 **Open-source BACnet/IP simulator for developers testing BACnet clients, BMS integrations, SCADA connectors and HVAC automation without physical hardware.**
 
-Run **7 virtual HVAC devices and 46 BACnet points** with Python or Docker. Control the simulation through a REST API and web dashboard; test discovery, reads, writes, priorities, Change of Value (COV), device availability and signed webhooks.
+Run **7 virtual HVAC devices and 60 BACnet points** with Python or Docker. Control the simulation through a REST API and web dashboard; test discovery, reads, writes, priorities, Change of Value (COV), device availability and signed webhooks.
 
 [Quick start](#quick-start) · [Devices](#virtual-hvac-devices) · [API reference](docs/api.md) · [BACnet capabilities](docs/bacnet-profile.md)
 
@@ -62,7 +62,7 @@ Open the **[dashboard](http://localhost:8080/ui)** or **[interactive API docs](h
 
 | Device | BACnet ID | Points | Equipment |
 |---|---|---|---|
-| AHU-01 | 1001 | 14 | Supply-only cleanroom AHU: fan VFD, coils, OA damper, room/filter pressure |
+| AHU-01 | 1001 | 28 | Supply-air AHU: fan, coils, heating pump, damper, cleanroom pressure |
 | FCU-01 / FCU-02 | 2001 / 2002 | 7 each | Fan coil units: room temperature, setpoint, occupancy |
 | TSTAT-01 | 3001 | 6 | Thermostat: temperature, humidity, setpoints, operating mode |
 | ZC-01 | 4001 | 7 | Zone controller: airflow, damper, reheat |

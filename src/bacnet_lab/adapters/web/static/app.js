@@ -18,6 +18,81 @@ function readValue(input) {
     return input.value;
 }
 
+const scenarioValueRequests = new WeakMap();
+
+async function updateScenarioPointValue(pointSelect, showLoading = true) {
+    const form = pointSelect.closest("form");
+    const readout = form.querySelector("[data-scenario-current-value]");
+    const deviceId = form.querySelector("[data-scenario-device]").value;
+    const pointName = pointSelect.value;
+    scenarioValueRequests.get(pointSelect)?.abort();
+    if (!deviceId || !pointName || pointSelect.disabled) {
+        readout.textContent = "Current value: unavailable";
+        return;
+    }
+    const controller = new AbortController();
+    scenarioValueRequests.set(pointSelect, controller);
+    if (showLoading) readout.textContent = "Current value: loading...";
+    try {
+        const response = await fetch(`/api/devices/${encodeURIComponent(deviceId)}`, {
+            signal: controller.signal,
+            cache: "no-store"
+        });
+        if (!response.ok) throw new Error("Device unavailable");
+        const device = await response.json();
+        const point = device.points.find((point) => point.object_name === pointName);
+        if (!point || device.status !== "online") throw new Error("Point unavailable");
+        if (controller.signal.aborted || !pointSelect.isConnected) return;
+        const units = {
+            degreesCelsius: "\u00b0C",
+            degreesFahrenheit: "\u00b0F",
+            partsPerMillion: "ppm",
+            percent: "%",
+            percentRelativeHumidity: "% RH",
+            noUnits: ""
+        };
+        const unit = units[point.units] ?? point.units;
+        const value = typeof point.present_value === "number"
+            ? new Intl.NumberFormat(undefined, {maximumSignificantDigits: 8}).format(point.present_value)
+            : String(point.present_value);
+        readout.textContent = `Current value: ${value}${unit ? ` ${unit}` : ""}`;
+    } catch (error) {
+        if (!controller.signal.aborted && pointSelect.isConnected) {
+            readout.textContent = "Current value: unavailable";
+        }
+    }
+}
+
+function updateScenarioPoints(deviceSelect) {
+    const form = deviceSelect.closest("form");
+    const pointSelect = form.querySelector("select[data-scenario-point]");
+    if (!pointSelect) return;
+
+    const availableOptions = [...pointSelect.options].filter((option) => option.dataset.deviceId);
+    const matchingOptions = availableOptions.filter((option) => option.dataset.deviceId === deviceSelect.value);
+    for (const option of availableOptions) option.hidden = option.dataset.deviceId !== deviceSelect.value;
+    if (pointSelect.selectedOptions[0]?.hidden) pointSelect.value = matchingOptions[0]?.value || "";
+    pointSelect.disabled = matchingOptions.length === 0;
+    updateScenarioPointValue(pointSelect);
+}
+
+document.addEventListener("change", (event) => {
+    if (event.target.matches("select[data-scenario-device]")) {
+        event.target.closest("form").dataset.dirty = "true";
+        updateScenarioPoints(event.target);
+    } else if (event.target.matches("select[data-scenario-point]")) {
+        event.target.closest("form").dataset.dirty = "true";
+        updateScenarioPointValue(event.target);
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("select[data-scenario-device]").forEach(updateScenarioPoints);
+});
+document.addEventListener("htmx:afterSwap", (event) => {
+    event.detail.target.querySelectorAll("select[data-scenario-device]").forEach(updateScenarioPoints);
+});
+
 document.addEventListener("submit", async (event) => {
     const form = event.target.closest("form[data-api]");
     if (!form) return;
@@ -64,6 +139,9 @@ document.addEventListener("input", (event) => {
 document.addEventListener("htmx:beforeSwap", (event) => {
     if (event.detail.target.querySelector('form[data-dirty="true"], form[data-busy="true"]')) {
         event.detail.shouldSwap = false;
+        event.detail.target.querySelectorAll("select[data-scenario-point]").forEach((pointSelect) => {
+            updateScenarioPointValue(pointSelect, false);
+        });
     }
 });
 document.addEventListener("htmx:responseError", () => notify("Refresh failed. Check server health.", true));

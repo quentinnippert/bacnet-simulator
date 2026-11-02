@@ -136,10 +136,38 @@
     <form data-api="/api/scenarios/{{ scenario.id }}/stop"><button type="submit">Stop</button></form>
     {% else %}
     <form data-api="/api/scenarios/{{ scenario.id }}/start" data-scenario="true">
+        {% set selected_device_id = scenario.parameters | selectattr('name', 'equalto', 'device_id') | map(attribute='value') | first | string %}
         {% for parameter in scenario.parameters %}
         <label>{{ parameter.description }}
+            {% if parameter.name == 'device_id' %}
+            <select name="{{ parameter.name }}" data-kind="number" data-scenario-device required>
+                <option value="">Choose a device</option>
+                {% for device in devices %}
+                <option value="{{ device.device_id }}" {% if parameter.value|string == device.device_id|string %}selected{% endif %}>
+                    {{ device.name }} ({{ device.device_id }}) · {{ device.status.value }}
+                </option>
+                {% endfor %}
+            </select>
+            {% elif parameter.name == 'point_name' %}
+            <select name="{{ parameter.name }}" data-scenario-point aria-describedby="{{ scenario.id }}-current-value" required>
+                <option value="">Choose a point</option>
+                {% for device in devices %}
+                    {% for point in device.points %}
+                        {% if point.object_type.value.startswith('analog') %}
+                <option value="{{ point.object_name }}" data-device-id="{{ device.device_id }}"
+                    {% if parameter.value == point.object_name and selected_device_id == device.device_id|string %}selected{% endif %}
+                    {% if selected_device_id != device.device_id|string %}hidden{% endif %}>
+                    {{ device.name }} - {{ point.object_name }}
+                </option>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </select>
+            <small id="{{ scenario.id }}-current-value" data-scenario-current-value aria-live="polite">Current value: loading...</small>
+            {% else %}
             <input name="{{ parameter.name }}" value="{{ parameter.value }}"
                 {% if parameter.default is number %}type="number" step="any" data-kind="number"{% else %}type="text"{% endif %} required>
+            {% endif %}
         </label>
         {% endfor %}
         <button type="submit">Start</button>
