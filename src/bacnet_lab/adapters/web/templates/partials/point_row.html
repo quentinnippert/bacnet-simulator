@@ -1,8 +1,11 @@
+{% if device.name == 'AHU-01' %}{% include "partials/ahu_equipment.html" %}{% endif %}
+<h2>Points</h2>
+<div class="points-table-scroll">
 <table>
     <thead><tr><th>Name</th><th>Type</th><th>Instance</th><th>Effective value</th><th>Units</th><th>Description</th></tr></thead>
     <tbody>
     {% for point in device.points %}
-    <tr>
+    <tr id="point-{{ device.device_id }}-{{ point.object_type.value }}-{{ point.object_instance }}">
         <td><strong>{{ point.object_name }}</strong></td>
         <td><code>{{ point.object_type.value }}</code></td>
         <td>{{ point.object_instance }}</td>
@@ -31,3 +34,4 @@
     {% endfor %}
     </tbody>
 </table>
+</div>

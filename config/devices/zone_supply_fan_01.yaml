@@ -1,0 +1,137 @@
+device_id: 6001
+name: "SF-01"
+description: "Supply fan controller"
+points:
+  - object_type: analogOutput
+    object_instance: 1
+    object_name: "SF-01/SupplyFanSpeed"
+    description: "Supply fan VFD speed command"
+    present_value: 60.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogOutput
+    object_instance: 3
+    object_name: "SF-01/SupplyDamperPosition"
+    description: "Supply isolation damper position command"
+    present_value: 100.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: binaryOutput
+    object_instance: 1
+    object_name: "SF-01/SupplyFanEnable"
+    description: "Supply fan enable command"
+    present_value: true
+  - object_type: binaryOutput
+    object_instance: 3
+    object_name: "SF-01/SupplyFanFaultReset"
+    description: "Supply fan VFD fault reset command"
+    present_value: false
+  - object_type: analogInput
+    object_instance: 1
+    object_name: "SF-01/SupplyFanSpeedFeedback"
+    description: "Supply fan VFD speed feedback"
+    present_value: 60.0
+    units: "percent"
+    cov_increment: 1.0
+  - object_type: analogInput
+    object_instance: 3
+    object_name: "SF-01/SupplyAirflow"
+    description: "Supply airflow measurement"
+    present_value: 1200.0
+    units: "cubicFeetPerMinute"
+    cov_increment: 10.0
+  - object_type: analogInput
+    object_instance: 5
+    object_name: "SF-01/SupplyDuctPressure"
+    description: "Supply duct static pressure"
+    present_value: 250.0
+    units: "pascals"
+    cov_increment: 5.0
+  - object_type: analogInput
+    object_instance: 7
+    object_name: "SF-01/SupplyFanCurrent"
+    description: "Supply fan motor current"
+    present_value: 4.5
+    units: "amperes"
+    cov_increment: 0.1
+  - object_type: analogInput
+    object_instance: 9
+    object_name: "SF-01/SupplyFanElectricalPower"
+    description: "Supply fan electrical power"
+    present_value: 2.16
+    units: "kilowatts"
+    cov_increment: 0.1
+  - object_type: analogInput
+    object_instance: 11
+    object_name: "SF-01/SupplyFanElectricalEnergy"
+    description: "Supply fan accumulated electrical energy"
+    present_value: 0.0
+    units: "kilowattHours"
+    cov_increment: 0.1
+  - object_type: analogInput
+    object_instance: 13
+    object_name: "SF-01/SupplyFanRuntime"
+    description: "Supply fan accumulated operating hours"
+    present_value: 0.0
+    units: "hours"
+    cov_increment: 0.1
+  - object_type: binaryInput
+    object_instance: 1
+    object_name: "SF-01/SupplyFanRunStatus"
+    description: "Supply fan run feedback"
+    present_value: true
+  - object_type: binaryInput
+    object_instance: 3
+    object_name: "SF-01/SupplyFanFault"
+    description: "Supply fan VFD fault status"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 5
+    object_name: "SF-01/SupplyAirflowProof"
+    description: "Supply airflow proving switch"
+    present_value: true
+  - object_type: binaryInput
+    object_instance: 7
+    object_name: "SF-01/SupplyDamperOpenStatus"
+    description: "Supply isolation damper open end switch"
+    present_value: true
+  - object_type: binaryInput
+    object_instance: 9
+    object_name: "SF-01/SupplyFanLocalOverride"
+    description: "Supply fan local control override active"
+    present_value: false
+  - object_type: analogValue
+    object_instance: 1
+    object_name: "SF-01/SupplyDuctPressureSetpoint"
+    description: "Supply duct static pressure target"
+    present_value: 250.0
+    units: "pascals"
+    cov_increment: 5.0
+  - object_type: analogValue
+    object_instance: 3
+    object_name: "SF-01/SupplyAirflowSetpoint"
+    description: "Supply airflow target"
+    present_value: 1200.0
+    units: "cubicFeetPerMinute"
+    cov_increment: 10.0
+  - object_type: multiStateValue
+    object_instance: 1
+    object_name: "SF-01/Mode"
+    description: "Requested operating mode"
+    present_value: 2
+    state_text: ["Off", "SupplyOnly"]
+  - object_type: binaryInput
+    object_instance: 11
+    object_name: "SF-01/FireAlarmStatus"
+    description: "Fire alarm interlock status"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 12
+    object_name: "SF-01/ExternalStop"
+    description: "External stop signal"
+    present_value: false
+  - object_type: binaryInput
+    object_instance: 13
+    object_name: "SF-01/ServiceSwitch"
+    description: "Service isolation switch status"
+    present_value: false

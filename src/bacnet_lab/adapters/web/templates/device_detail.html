@@ -11,7 +11,6 @@
         {% if device.error %} — {{ device.error }}{% endif %}</p>
 </hgroup>
 
-<h2>Points</h2>
 <div hx-get="/ui/partials/points/{{ device.device_id }}" hx-trigger="every 3s" hx-swap="innerHTML">
     {% include "partials/point_row.html" %}
 </div>

@@ -115,23 +115,23 @@ async def test_hvac_cycle_updates_estimated_fan_power(lab):
 
 
 @pytest.mark.asyncio
-async def test_cleanroom_scenario_controls_pressure_and_supply_fan(lab):
+async def test_supply_ahu_scenario_controls_fan_without_external_sensors(lab):
     client, c = lab
     c.event_publisher._handlers.clear()
     c.device_service._repo.update_point_value = AsyncMock()
     await c.device_service.write_point_by_name(1001, "AHU-01/OutdoorAirDamper", 0)
     response = await client.post(
         "/api/scenarios/cleanroom_ahu/start",
-        json={"params": {"room_pressure_setpoint_pa": 20, "interval": 0.1}},
+        json={"params": {"fan_speed_setpoint_pct": 80, "interval": 0.1}},
     )
     assert response.status_code == 200
     await until(
         lambda: (
             c.device_service.point(1001, "AHU-01/ElectricalPower").present_value
-            == pytest.approx(5.62)
+            == pytest.approx(5.12)
         )
     )
-    assert c.device_service.point(1001, "AHU-01/RoomDifferentialPressure").present_value > 15
+    assert c.device_service.point(1001, "AHU-01/FanSpeed").present_value == 80
     assert c.device_service.point(1001, "AHU-01/FanRunStatus").present_value is True
     assert c.device_service.point(1001, "AHU-01/OutdoorAirDamper").present_value == 100
     await c.device_service.write_point_by_name(1001, "AHU-01/FireAlarmStatus", True)
@@ -139,6 +139,21 @@ async def test_cleanroom_scenario_controls_pressure_and_supply_fan(lab):
     assert c.device_service.point(1001, "AHU-01/FanSpeed").present_value == 0
     assert c.device_service.point(1001, "AHU-01/OutdoorAirDamper").present_value == 0
     await client.post("/api/scenarios/cleanroom_ahu/stop")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "scenario_id,params",
+    [
+        ("cleanroom_ahu", {"room_pressure_setpoint_pa": 15}),
+        ("seal_ahu", {"outdoor_air_humidity_pct": 70}),
+        ("cleanroom_ahu", {"fan_speed_setpoint_pct": 101}),
+    ],
+)
+async def test_ahu_scenarios_reject_removed_or_invalid_parameters(lab, scenario_id, params):
+    client, _ = lab
+    response = await client.post(f"/api/scenarios/{scenario_id}/start", json={"params": params})
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio

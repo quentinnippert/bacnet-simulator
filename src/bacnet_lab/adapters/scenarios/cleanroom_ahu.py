@@ -9,9 +9,9 @@ from bacnet_lab.domain.models.scenario import ScenarioParameter
 
 class CleanroomAhuScenario(BaseScenario):
     id = "cleanroom_ahu"
-    name = "Cleanroom Supply AHU"
+    name = "Supply AHU Control"
     description = (
-        "Maintains cleanroom pressure and supply-air temperature with fan, coil, "
+        "Maintains fan speed and supply-air temperature with fan, coil, "
         "damper, and safety interlocks."
     )
 
@@ -21,9 +21,9 @@ class CleanroomAhuScenario(BaseScenario):
                 name="interval", description="Update interval in seconds", default=1.0
             ),
             ScenarioParameter(
-                name="room_pressure_setpoint_pa",
-                description="Room pressure setpoint in Pa",
-                default=15.0,
+                name="fan_speed_setpoint_pct",
+                description="Supply fan speed target in percent",
+                default=75.0,
             ),
             ScenarioParameter(
                 name="supply_air_setpoint_c",
@@ -46,7 +46,6 @@ class CleanroomAhuScenario(BaseScenario):
         required = (
             "SupplyAirTemp",
             "SupplyAirTempSetpoint",
-            "RoomDifferentialPressure",
             "FilterDifferentialPressure",
             "FanSpeed",
             "FanSpeedFeedback",
@@ -62,8 +61,8 @@ class CleanroomAhuScenario(BaseScenario):
         for point_name in required:
             self.require_point(1001, f"AHU-01/{point_name}")
 
-        if not 0 <= self.parameter("room_pressure_setpoint_pa") <= 50:
-            raise ValidationError("room_pressure_setpoint_pa must be between 0 and 50 Pa")
+        if not 0 <= self.parameter("fan_speed_setpoint_pct") <= 100:
+            raise ValidationError("fan_speed_setpoint_pct must be between 0 and 100 percent")
         if not 5 <= self.parameter("supply_air_setpoint_c") <= 35:
             raise ValidationError("supply_air_setpoint_c must be between 5 and 35 Celsius")
         if not 0 <= self.parameter("outdoor_air_damper_pct") <= 100:
@@ -73,14 +72,10 @@ class CleanroomAhuScenario(BaseScenario):
 
     async def run(self) -> None:
         interval = float(self.parameter("interval"))
-        pressure_setpoint = float(self.parameter("room_pressure_setpoint_pa"))
+        fan_setpoint = float(self.parameter("fan_speed_setpoint_pct"))
         supply_setpoint = float(self.parameter("supply_air_setpoint_c"))
         damper_setpoint = float(self.parameter("outdoor_air_damper_pct"))
         rated_power = float(self.parameter("fan_rated_power_kw"))
-        fan_speed = float(self._device_service.point(1001, "AHU-01/FanSpeed").present_value)
-        room_pressure = float(
-            self._device_service.point(1001, "AHU-01/RoomDifferentialPressure").present_value
-        )
         supply_temperature = float(
             self._device_service.point(1001, "AHU-01/SupplyAirTemp").present_value
         )
@@ -93,19 +88,15 @@ class CleanroomAhuScenario(BaseScenario):
 
             if fire_alarm or fan_fault:
                 fan_speed = 0.0
-                room_pressure += (0.0 - room_pressure) * 0.4
                 fan_enabled = False
                 fan_running = False
                 damper_position = 0.0
                 cooling_valve = 0.0
                 heating_valve = 0.0
             else:
-                pressure_error = pressure_setpoint - room_pressure
-                fan_speed = max(0.0, min(100.0, fan_speed + pressure_error * 1.5))
-                modeled_pressure = fan_speed * 0.2
-                room_pressure += (modeled_pressure - room_pressure) * 0.4
+                fan_speed = fan_setpoint
                 fan_enabled = True
-                fan_running = True
+                fan_running = fan_speed > 0
                 damper_position = damper_setpoint
 
                 temperature_error = supply_setpoint - supply_temperature
@@ -123,6 +114,5 @@ class CleanroomAhuScenario(BaseScenario):
             await self.write(1001, "AHU-01/CoolingValve", round(cooling_valve, 1))
             await self.write(1001, "AHU-01/HeatingValve", round(heating_valve, 1))
             await self.write(1001, "AHU-01/SupplyAirTemp", round(supply_temperature, 1))
-            await self.write(1001, "AHU-01/RoomDifferentialPressure", round(room_pressure, 1))
             await self.write(1001, "AHU-01/ElectricalPower", fan_power_kw)
             await asyncio.sleep(interval)

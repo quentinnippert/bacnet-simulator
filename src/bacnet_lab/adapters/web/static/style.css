@@ -1,3 +1,52 @@
+.ahu-equipment {
+    --ahu-line: #b6c8c0;
+    --ahu-ink: #34443b;
+    margin: 1.5rem 0 2rem;
+    padding: 1rem 0;
+    border-block: 1px solid var(--ahu-line);
+}
+.ahu-equipment-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 0.75rem; }
+.ahu-equipment-heading h2 { margin-bottom: 0.2rem; font-size: 1.25rem; }
+.ahu-equipment-heading p { color: #536159; font-size: 0.85rem; margin-bottom: 1rem; }
+.ahu-air-path { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.ahu-stage { min-width: 0; padding: 0.4rem; border-right: 1px solid #e0e8e3; }
+.ahu-stage:last-child { border-right: 0; }
+.ahu-stage svg { display: block; width: 100%; height: 80px; }
+.ahu-stage h3, .ahu-interlocks h3 { font-size: 0.85rem; margin: 0.4rem 0 0.65rem; }
+.ahu-duct { fill: none; stroke: var(--ahu-line); stroke-width: 2; }
+.ahu-symbol { fill: none; stroke: #536d62; stroke-width: 2; stroke-linejoin: round; }
+.ahu-air { fill: none; stroke: #147d78; stroke-width: 2; }
+.ahu-filter { fill: #edf2eb; stroke: #82938a; }
+.ahu-cooling { fill: #dcecf4; stroke: #537e9a; }
+.ahu-heating { fill: #f5e1dc; stroke: #bd6048; }
+.ahu-fan-case { fill: #fff; stroke: #536d62; stroke-width: 2; }
+.ahu-fan-hub { fill: #147d78; }
+.ahu-sensor { fill: none; stroke: #96721e; stroke-width: 2; }
+.ahu-reading { margin: 0.5rem 0; font-size: 0.75rem; overflow-wrap: anywhere; }
+.ahu-reading a, .ahu-reading > span { display: block; color: #536159; text-decoration-color: #b6c8c0; }
+.ahu-reading strong { display: block; color: var(--ahu-ink); font-variant-numeric: tabular-nums; }
+.ahu-reading small { font-size: inherit; font-weight: normal; }
+.ahu-fan { background: #f0f7f4; border-top: 3px solid #147d78; }
+.ahu-fan-state { display: block; color: #34443b; font-size: 0.75rem; font-weight: 700; }
+.ahu-fan-state.ahu-fault { color: #b42318; }
+.ahu-interlocks { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; border-top: 1px solid #e0e8e3; margin-top: 1rem; padding-top: 0.5rem; }
+.ahu-interlocks h3 { align-self: center; margin: 0; }
+.ahu-fan.is-running .ahu-fan-rotor { transform-origin: 40px 32px; animation: ahu-fan-spin 2s linear infinite; }
+.points-table-scroll { max-width: 100%; overflow-x: auto; }
+.points-table-scroll tr:target { background: #edf5f1; outline: 2px solid #147d78; outline-offset: -2px; }
+@keyframes ahu-fan-spin { to { transform: rotate(360deg); } }
+@media (max-width: 1000px) {
+    .ahu-air-path { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem 0; }
+}
+@media (max-width: 576px) {
+    body:has(.ahu-equipment) > nav.container-fluid { flex-wrap: wrap; }
+    body:has(.ahu-equipment) > nav.container-fluid ul { flex-wrap: wrap; }
+    .ahu-air-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ahu-fan.is-running .ahu-fan-rotor { animation: none; }
+}
+
 .status-badge {
     display: inline-block;
     padding: 2px 10px;

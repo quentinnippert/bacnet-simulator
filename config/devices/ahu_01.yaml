@@ -1,6 +1,6 @@
 device_id: 1001
 name: "AHU-01"
-description: "Supply-only AHU - Positive Pressure Cleanroom"
+description: "Supply-only AHU - Fan, coils, filter and heating circuit"
 points:
   - object_type: analogInput
     object_instance: 1
@@ -65,13 +65,6 @@ points:
     units: "pascals"
     cov_increment: 5.0
   - object_type: analogInput
-    object_instance: 7
-    object_name: "AHU-01/RoomDifferentialPressure"
-    description: "Cleanroom pressure relative to corridor"
-    present_value: 15.0
-    units: "pascals"
-    cov_increment: 0.5
-  - object_type: analogInput
     object_instance: 8
     object_name: "AHU-01/FanSpeedFeedback"
     description: "Supply fan VFD speed feedback"
@@ -99,13 +92,6 @@ points:
     present_value: 20.0
     units: "degreesCelsius"
     cov_increment: 0.5
-  - object_type: analogInput
-    object_instance: 10
-    object_name: "AHU-01/OutdoorAirHumidity"
-    description: "Outdoor air relative humidity"
-    present_value: 70.0
-    units: "percent"
-    cov_increment: 1.0
   - object_type: analogInput
     object_instance: 11
     object_name: "AHU-01/IntakeAirflow"

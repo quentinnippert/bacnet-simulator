@@ -1,18 +1,19 @@
 # Devices
 
-BACnet Lab simulates 7 HVAC devices with 60 BACnet points. Default devices use separate UDP ports and directed discovery.
+BACnet Lab simulates 8 HVAC devices with 80 BACnet points. Default devices use separate UDP ports and directed discovery.
 
 ## Device Overview
 
 | Device | ID | UDP Port | Points | Location |
 |--------|----|----------|--------|----------|
-| AHU-01 | 1001 | 47808 | 28 | Positive Pressure Cleanroom |
+| AHU-01 | 1001 | 47808 | 26 | Supply Air Handling Unit |
 | FCU-01 | 2001 | 47810 | 7 | Zone 1 (Office North) |
 | FCU-02 | 2002 | 47811 | 7 | Zone 2 (Office South) |
 | TSTAT-01 | 3001 | 47813 | 6 | Lobby |
 | ZC-01 | 4001 | 47814 | 7 | Open Plan Area |
 | OAT-01 | 5001 | 47812 | 2 | Outdoor |
 | CO2-01 | 5002 | 47809 | 3 | Conference Room |
+| SF-01 | 6001 | 47815 | 22 | Supply Ventilation |
 
 ## AHU-01 — Air Handling Unit
 
@@ -21,7 +22,6 @@ BACnet Lab simulates 7 HVAC devices with 60 BACnet points. Default devices use s
 | AHU-01/SupplyAirTemp | analogInput | Supply air temperature | 22.5 | degreesCelsius |
 | AHU-01/ElectricalPower | analogInput | Estimated supply fan electrical power (fan-only) | 4.22 | kilowatts |
 | AHU-01/FilterDifferentialPressure | analogInput | Filter differential pressure (FI-01) | 75.0 | pascals |
-| AHU-01/RoomDifferentialPressure | analogInput | Cleanroom pressure relative to corridor (PT-01) | 15.0 | pascals |
 | AHU-01/FanSpeedFeedback | analogInput | Supply fan VFD speed feedback | 75.0 | percent |
 | AHU-01/CoolingValve | analogOutput | Cooling coil valve position | 45.0 | percent |
 | AHU-01/HeatingValve | analogOutput | Heating coil valve position | 0.0 | percent |
@@ -33,7 +33,6 @@ BACnet Lab simulates 7 HVAC devices with 60 BACnet points. Default devices use s
 | AHU-01/FireAlarmStatus | binaryInput | Fire alarm interlock status | false | — |
 | AHU-01/SupplyFanEnable | binaryOutput | Supply fan enable command | true | — |
 | AHU-01/ReturnWaterTemp | analogInput | Heating coil return water temperature | 20.0 | degreesCelsius |
-| AHU-01/OutdoorAirHumidity | analogInput | Outdoor air relative humidity | 70.0 | percent |
 | AHU-01/IntakeAirflow | analogInput | Intake airflow as a percentage of design flow | 0.0 | percent |
 | AHU-01/HeatingPower | analogInput | Estimated heating power from the energy meter model | 0.0 | kilowatts |
 | AHU-01/HeatingEnergy | analogInput | Accumulated estimated heating energy | 0.0 | kilowattHours |
@@ -47,7 +46,7 @@ BACnet Lab simulates 7 HVAC devices with 60 BACnet points. Default devices use s
 | AHU-01/HeatingPumpRunStatus | binaryInput | Heating circulation pump run feedback | false | — |
 | AHU-01/HeatingPumpEnable | binaryOutput | Heating circulation pump command | false | — |
 
-The bundled AHU inventory is shared by the `cleanroom_ahu` and `seal_ahu` scenarios, so it includes their combined point set. It has no return-air or mixed-air sensor. `ElectricalPower` is an estimate updated by the HVAC Day/Night and Cleanroom Supply AHU scenarios using `rated_power × (fan_speed / 100)^3`. Both assume a 10 kW rated supply fan by default; change `fan_rated_power_kw` to use another rating. This is fan-only power, not total AHU or plant energy, and is not a measured value.
+The bundled AHU inventory contains only unit-related points shared by the `cleanroom_ahu` and `seal_ahu` scenarios. External room pressure and outdoor humidity sensors are not part of AHU-01; it also has no return-air or mixed-air sensor. Intake airflow, the intake damper, and safety interlocks remain part of the unit. `ElectricalPower` is an estimate updated by the HVAC Day/Night and Supply AHU Control scenarios using `rated_power × (fan_speed / 100)^3`. Both assume a 10 kW rated supply fan by default; change `fan_rated_power_kw` to use another rating. This is fan-only power, not total AHU or plant energy, and is not a measured value.
 
 ## FCU-01 — Fan Coil Unit Zone 1
 
@@ -111,12 +110,60 @@ The bundled AHU inventory is shared by the `cleanroom_ahu` and `seal_ahu` scenar
 | CO2-01/CO2Setpoint | analogValue | CO2 setpoint for demand ventilation | 800.0 | partsPerMillion |
 | CO2-01/HighCO2Alarm | binaryValue | High CO2 alarm | false | — |
 
+## SF-01 - Supply Fan Controller
+
+Device instance **6001**, default UDP port **47815**. The file
+`config/devices/zone_supply_fan_01.yaml` sorts after the existing inventory,
+preserving all seven existing port assignments. Like other default devices, it
+uses the configured BACnet IP and sequential port allocation from `port_start`.
+
+Each row below represents one point, prefixed with `SF-01/Supply`
+(for example, `SF-01/SupplyFanSpeed`). There are no exhaust points.
+
+| Point suffix | Object type | Default | Units |
+|---|---|---|---|
+| FanSpeed | analogOutput | 60 | percent |
+| DamperPosition | analogOutput | 100 | percent |
+| FanEnable | binaryOutput | true | - |
+| FanFaultReset | binaryOutput | false | - |
+| FanSpeedFeedback | analogInput | 60 | percent |
+| Airflow | analogInput | 1200 | cubicFeetPerMinute |
+| DuctPressure | analogInput | 250 | pascals |
+| FanCurrent | analogInput | 4.5 | amperes |
+| FanElectricalPower | analogInput | 2.16 | kilowatts |
+| FanElectricalEnergy | analogInput | 0 | kilowattHours |
+| FanRuntime | analogInput | 0 | hours |
+| FanRunStatus | binaryInput | true | - |
+| FanFault | binaryInput | false | - |
+| AirflowProof | binaryInput | true | - |
+| DamperOpenStatus | binaryInput | true | - |
+| FanLocalOverride | binaryInput | false | - |
+| DuctPressureSetpoint | analogValue | 250 | pascals |
+| AirflowSetpoint | analogValue | 1200 | cubicFeetPerMinute |
+
+Controller-wide points use the `SF-01/` prefix:
+
+| Point | Object type | Default | States |
+|---|---|---|---|
+| Mode | multiStateValue | 2 | 1=Off, 2=SupplyOnly |
+| FireAlarmStatus | binaryInput | false | - |
+| ExternalStop | binaryInput | false | - |
+| ServiceSwitch | binaryInput | false | - |
+
+All points expose the standard simulator BACnet properties, including descriptions,
+status flags and Out_Of_Service. Analog points include units and COV increments;
+commandable outputs/values include priority arrays and relinquish defaults.
+These are independently controllable simulated points, not an automatic fan
+sequence: enable, reset, mode and interlock writes do not drive feedback, alarms,
+energy or runtime. Use HTTP point writes or manual overrides to set simulated
+feedback; native BACnet input writes require Out_Of_Service.
+
 ## Custom devices
 
 Add a YAML file in `config/devices/`, then restart:
 
 ```yaml
-device_id: 6001
+device_id: 7001
 name: "MY-DEVICE-01"
 description: "My custom device"
 points:

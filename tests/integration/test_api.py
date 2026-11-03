@@ -188,7 +188,7 @@ async def test_health(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["devices_count"] == 7
+    assert data["devices_count"] == 8
 
 
 @pytest.mark.asyncio
@@ -196,7 +196,7 @@ async def test_list_devices(client):
     resp = await client.get("/api/devices")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 7
+    assert len(data) == 8
 
 
 @pytest.mark.asyncio
@@ -205,10 +205,12 @@ async def test_get_device(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["name"] == "AHU-01"
-    assert len(data["points"]) == 28
+    assert len(data["points"]) == 26
     point_names = {point["object_name"] for point in data["points"]}
     assert "AHU-01/ReturnAirTemp" not in point_names
     assert "AHU-01/MixedAirTemp" not in point_names
+    assert "AHU-01/RoomDifferentialPressure" not in point_names
+    assert "AHU-01/OutdoorAirHumidity" not in point_names
     electrical_power = next(
         point for point in data["points"] if point["object_name"] == "AHU-01/ElectricalPower"
     )
@@ -271,6 +273,54 @@ async def test_web_ui_pages_render(client, path, expected_text):
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
     assert expected_text in resp.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/ui/devices/1001", "/ui/partials/points/1001"])
+async def test_ahu_equipment_shows_builtin_supply_fan(client, path):
+    response = await client.get(path)
+    assert response.status_code == 200
+    assert 'aria-labelledby="ahu-equipment-title"' in response.text
+    assert "Built-in supply fan" in response.text
+    assert "Cooling coil" in response.text
+    assert "Heating coil" in response.text
+    assert "Intake damper" in response.text
+    assert "RoomDifferentialPressure" not in response.text
+    assert "OutdoorAirHumidity" not in response.text
+    assert "<h3>Cleanroom</h3>" not in response.text
+    assert response.text.count('role="listitem"') == 6
+    stage_positions = [
+        response.text.index(f"<h3>{stage}</h3>")
+        for stage in (
+            "Intake damper", "Filter", "Supply fan", "Cooling coil", "Heating coil", "Supply air"
+        )
+    ]
+    assert stage_positions == sorted(stage_positions)
+    assert 'title="AHU-01/FanSpeed"' in response.text
+    assert 'title="AHU-01/FanSpeedFeedback"' in response.text
+    assert 'href="#point-1001-analogOutput-3"' in response.text
+    assert 'id="point-1001-analogOutput-3"' in response.text
+    assert 'role="listitem"' in response.text
+
+
+@pytest.mark.asyncio
+async def test_ahu_equipment_refreshes_command_values(client):
+    response = await client.put(
+        "/api/devices/1001/points",
+        json={"point_name": "AHU-01/FanSpeed", "value": 68.0},
+    )
+    assert response.status_code == 200
+    response = await client.get("/ui/partials/points/1001")
+    assert 'Command</a>\n    <strong>68 <small>%</small></strong>' in response.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("device_id", [2001, 6001])
+async def test_non_ahu_devices_do_not_show_ahu_equipment(client, device_id):
+    for path in (f"/ui/devices/{device_id}", f"/ui/partials/points/{device_id}"):
+        response = await client.get(path)
+        assert response.status_code == 200
+        assert 'aria-labelledby="ahu-equipment-title"' not in response.text
 
 
 @pytest.mark.asyncio

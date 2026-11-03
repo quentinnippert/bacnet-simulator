@@ -65,27 +65,25 @@
             <rect class="cleanroom-component cleanroom-filter" x="119" y="51" width="45" height="51" rx="2" />
             <path class="cleanroom-filter-lines" d="M125 95L158 58M125 83L150 55M137 98L159 73" />
             <text x="141" y="132" text-anchor="middle">FILTER</text>
-            <rect class="cleanroom-component cleanroom-cooling" x="180" y="51" width="45" height="51" rx="2" />
-            <path class="cleanroom-coil-lines" d="M186 57L219 96M219 57L186 96M202 53V100" />
-            <text x="202" y="132" text-anchor="middle">CHW COIL</text>
-            <rect class="cleanroom-component cleanroom-heating" x="241" y="51" width="45" height="51" rx="2" />
+            <circle class="cleanroom-fan-case" cx="202" cy="76" r="24" />
+            <path class="cleanroom-fan-blades" d="M202 57V76L218 84M221 76H202L194 93M202 95V76L185 68" />
+            <text x="202" y="132" text-anchor="middle">VFD FAN</text>
+            <rect class="cleanroom-component cleanroom-cooling" x="241" y="51" width="45" height="51" rx="2" />
             <path class="cleanroom-coil-lines" d="M247 57L280 96M280 57L247 96M263 53V100" />
-            <text x="263" y="132" text-anchor="middle">HW COIL</text>
-            <circle class="cleanroom-fan-case" cx="337" cy="76" r="24" />
-            <path class="cleanroom-fan-blades" d="M337 57V76L353 84M356 76H337L329 93M337 95V76L320 68" />
-            <text x="337" y="132" text-anchor="middle">VFD FAN</text>
-            <rect class="cleanroom-room" x="423" y="48" width="120" height="83" rx="3" />
-            <path class="cleanroom-room-air" d="M441 77H525" marker-end="url(#cleanroom-air-arrow)" />
-            <text class="cleanroom-heading" x="483" y="68" text-anchor="middle">CLEANROOM</text>
-            <text class="cleanroom-pressure-value" x="483" y="99" text-anchor="middle">+15 Pa</text>
-            <circle class="cleanroom-pressure-sensor" cx="523" cy="117" r="9" />
-            <text class="cleanroom-sensor-label" x="510" y="149" text-anchor="end">PT-01 room pressure</text>
+            <text x="263" y="132" text-anchor="middle">CHW COIL</text>
+            <rect class="cleanroom-component cleanroom-heating" x="315" y="51" width="45" height="51" rx="2" />
+            <path class="cleanroom-coil-lines" d="M321 57L354 96M354 57L321 96M337 53V100" />
+            <text x="337" y="132" text-anchor="middle">HW COIL</text>
+            <path class="cleanroom-air-path" d="M423 76H543" marker-end="url(#cleanroom-air-arrow)" />
+            <circle class="cleanroom-controller" cx="483" cy="51" r="9" />
+            <path class="cleanroom-feedback" d="M483 60V76" />
+            <text class="cleanroom-sensor-label" x="483" y="132" text-anchor="middle">SUPPLY TEMP</text>
             <rect class="cleanroom-controller" x="196" y="158" width="152" height="31" rx="3" />
-            <text class="cleanroom-controller-label" x="272" y="178" text-anchor="middle">BMS / PRESSURE LOOP</text>
-            <path class="cleanroom-feedback" d="M523 126V198H348V174M198 174H176V144H337V102" />
+            <text class="cleanroom-controller-label" x="272" y="178" text-anchor="middle">BMS / FAN + SAT</text>
+            <path class="cleanroom-feedback" d="M483 85V198H348V174M198 174H176V144H202V102" />
             <text class="cleanroom-interlock" x="12" y="219">FIRE / FAN FAULT: FAN OFF, OA DAMPER CLOSED</text>
         </svg>
-        <span class="visual-key"><i class="key-temp"></i>Supply airflow <i class="key-alarm"></i>Pressure feedback and safety interlock</span>
+        <span class="visual-key"><i class="key-temp"></i>Supply airflow <i class="key-alarm"></i>Fan and temperature control with safety interlocks</span>
         {% elif scenario.id == 'seal_ahu' %}
         <svg viewBox="0 0 560 240" aria-hidden="true">
             <defs>
@@ -103,15 +101,15 @@
             <rect class="seal-component seal-filter" x="111" y="56" width="42" height="52" rx="2" />
             <path class="seal-filter-lines" d="M117 101L147 62M117 87L139 58M128 105L148 78" />
             <text x="132" y="142" text-anchor="middle">FILTER</text>
-            <rect class="seal-component seal-coil" x="166" y="56" width="44" height="52" rx="2" />
-            <path class="seal-coil-lines" d="M172 62L204 102M204 62L172 102M188 58V106" />
-            <text x="188" y="142" text-anchor="middle">HW COIL</text>
-            <circle class="seal-fan-case" cx="348" cy="82" r="24" />
-            <path class="seal-fan-blades" d="M348 63V82L364 90M367 82H348L340 99M348 101V82L331 74" />
-            <text x="348" y="142" text-anchor="middle">VSD</text>
-            <circle class="seal-sensor" cx="245" cy="56" r="7" />
-            <text class="seal-sensor-label" x="245" y="31" text-anchor="middle">SUPPLY TEMP</text>
-            <path class="seal-water-path" d="M188 108V165H151V176M164 176H197M225 176H278V160H210V108" />
+            <circle class="seal-fan-case" cx="188" cy="82" r="24" />
+            <path class="seal-fan-blades" d="M188 63V82L204 90M207 82H188L180 99M188 101V82L171 74" />
+            <text x="188" y="142" text-anchor="middle">VSD</text>
+            <rect class="seal-component seal-coil" x="246" y="56" width="44" height="52" rx="2" />
+            <path class="seal-coil-lines" d="M252 62L284 102M284 62L252 102M268 58V106" />
+            <text x="268" y="142" text-anchor="middle">HW COIL</text>
+            <circle class="seal-sensor" cx="348" cy="56" r="7" />
+            <text class="seal-sensor-label" x="348" y="31" text-anchor="middle">SUPPLY TEMP</text>
+            <path class="seal-water-path" d="M268 108V151H188V165H151V176M164 176H197M225 176H278V160H290V108" />
             <circle class="seal-pump-case" cx="151" cy="176" r="13" />
             <path class="seal-pump-blades" d="M151 166V176L159 181M161 176H151L147 185M151 186V176L143 172" />
             <text x="151" y="207" text-anchor="middle">PUMP</text>

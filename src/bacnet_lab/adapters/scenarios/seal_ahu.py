@@ -41,11 +41,6 @@ class SealAhuScenario(BaseScenario):
                 name="outdoor_air_temp_c", description="Outdoor air temperature in Celsius", default=8.0
             ),
             ScenarioParameter(
-                name="outdoor_air_humidity_pct",
-                description="Outdoor relative humidity in percent",
-                default=70.0,
-            ),
-            ScenarioParameter(
                 name="supply_air_setpoint_c",
                 description="Supply air temperature target in Celsius",
                 default=20.0,
@@ -106,7 +101,6 @@ class SealAhuScenario(BaseScenario):
             "ReturnWaterTemp",
             "ReturnWaterTempSetpoint",
             "ReturnWaterMinimumSetpoint",
-            "OutdoorAirHumidity",
             "IntakeAirflow",
             "HeatingValve",
             "HeatingPumpEnable",
@@ -143,8 +137,6 @@ class SealAhuScenario(BaseScenario):
             raise ValidationError("simulation_start_hour must be between 0 and 24")
         if not -40 <= self.parameter("outdoor_air_temp_c") <= 60:
             raise ValidationError("outdoor_air_temp_c must be between -40 and 60 Celsius")
-        if not 0 <= self.parameter("outdoor_air_humidity_pct") <= 100:
-            raise ValidationError("outdoor_air_humidity_pct must be between 0 and 100 percent")
         if not 5 <= self.parameter("supply_air_setpoint_c") <= 35:
             raise ValidationError("supply_air_setpoint_c must be between 5 and 35 Celsius")
         for name in ("fan_speed_setpoint_pct", "startup_valve_boost_pct"):
@@ -196,7 +188,6 @@ class SealAhuScenario(BaseScenario):
             pump_exercise = weekday == 0 and 12 <= hour < 12 + 10 / 60
 
             outdoor_temp = float(self.parameter("outdoor_air_temp_c"))
-            humidity = float(self.parameter("outdoor_air_humidity_pct"))
             supply_setpoint = float(self.parameter("supply_air_setpoint_c"))
             return_minimum = float(self.parameter("minimum_return_water_temp_c"))
             stopped_return_setpoint = float(self.parameter("stopped_return_water_temp_c"))
@@ -281,7 +272,6 @@ class SealAhuScenario(BaseScenario):
                 ("ReturnWaterTemp", round(return_temp, 1)),
                 ("ReturnWaterTempSetpoint", stopped_return_setpoint),
                 ("ReturnWaterMinimumSetpoint", return_minimum),
-                ("OutdoorAirHumidity", humidity),
                 ("IntakeAirflow", round(fan_speed, 1)),
                 ("ReturnWaterControlActive", return_control),
                 ("ElectricalPower", round(fan_power, 2)),

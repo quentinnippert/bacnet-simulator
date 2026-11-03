@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "bacnet-lab"
 version = "0.1.0"
-description = "Open-source BACnet/IP network simulator with 7 virtual HVAC devices, REST API, web dashboard, and Docker deployment"
+description = "Open-source BACnet/IP network simulator with 8 virtual HVAC devices, REST API, web dashboard, and Docker deployment"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"

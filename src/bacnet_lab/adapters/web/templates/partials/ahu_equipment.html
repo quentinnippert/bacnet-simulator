@@ -1,0 +1,65 @@
+{% macro reading(suffix, label, unit='', binary=false) %}
+{% set point = device.get_point_by_name(device.name ~ '/' ~ suffix) %}
+<div class="ahu-reading">
+    {% if point %}
+    <a href="#point-{{ device.device_id }}-{{ point.object_type.value }}-{{ point.object_instance }}" title="{{ point.object_name }}">{{ label }}</a>
+    <strong>{% if binary %}{{ 'Active' if point.present_value else 'Inactive' }}{% else %}{{ '%g' | format(point.present_value) }}{% endif %}{% if unit %} <small>{{ unit }}</small>{% endif %}</strong>
+    {% else %}<span>{{ label }}</span><strong>Not configured</strong>{% endif %}
+</div>
+{% endmacro %}
+{% set run = device.get_point_by_name(device.name ~ '/FanRunStatus') %}
+{% set fault = device.get_point_by_name(device.name ~ '/FanFault') %}
+<section class="ahu-equipment" aria-labelledby="ahu-equipment-title">
+    <div class="ahu-equipment-heading">
+        <div><h2 id="ahu-equipment-title">AHU-01 air path</h2><p>Supply-only air handling unit &middot; Built-in supply fan</p></div>
+        <span class="status-badge {{ 'status-online' if device.status.value == 'online' else 'status-offline' }}">{{ 'Live values' if device.status.value == 'online' else 'Last known values' }}</span>
+    </div>
+    <div class="ahu-air-path" role="list" aria-label="AHU airflow from intake damper to supply air outlet">
+        <div class="ahu-stage" role="listitem">
+            <svg viewBox="0 0 80 64" aria-hidden="true"><path class="ahu-duct" d="M0 16H80M0 48H80"/><path class="ahu-symbol" d="M26 20L54 44M26 44L54 20"/><path class="ahu-air" d="M3 32H19M61 32H76M70 27L76 32L70 37"/></svg>
+            <h3>Intake damper</h3>
+            {{ reading('OutdoorAirDamper', 'Damper', '%') }}
+            {{ reading('IntakeAirflow', 'Intake flow', '%') }}
+        </div>
+        <div class="ahu-stage" role="listitem">
+            <svg viewBox="0 0 80 64" aria-hidden="true"><path class="ahu-duct" d="M0 16H80M0 48H80"/><path class="ahu-filter" d="M28 12H52V52H28Z"/><path class="ahu-symbol" d="M30 16L50 28L30 40L50 48"/><path class="ahu-air" d="M3 32H23M57 32H76M70 27L76 32L70 37"/></svg>
+            <h3>Filter</h3>
+            {{ reading('FilterDifferentialPressure', 'Pressure drop', 'Pa') }}
+        </div>
+        <div class="ahu-stage ahu-fan {{ 'is-running' if device.status.value == 'online' and run and run.present_value and not (fault and fault.present_value) else '' }}" role="listitem">
+            <svg viewBox="0 0 80 64" aria-hidden="true"><path class="ahu-duct" d="M0 16H80M0 48H80"/><circle class="ahu-fan-case" cx="40" cy="32" r="24"/><g class="ahu-fan-rotor"><path class="ahu-symbol" d="M40 32C15 12 48 5 40 32C65 12 72 45 40 32C55 58 22 60 40 32Z"/></g><circle class="ahu-fan-hub" cx="40" cy="32" r="4"/></svg>
+            <h3>Supply fan</h3>
+            <span class="ahu-fan-state {{ 'ahu-fault' if fault and fault.present_value else '' }}">{% if device.status.value != 'online' %}{{ device.status.value | capitalize }}{% elif fault and fault.present_value %}Fault{% elif run and run.present_value %}Running{% elif run %}Stopped{% else %}Unknown{% endif %}</span>
+            {{ reading('SupplyFanEnable', 'Enable', binary=true) }}
+            {{ reading('FanSpeed', 'Command', '%') }}
+            {{ reading('FanSpeedFeedback', 'Feedback', '%') }}
+            {{ reading('ElectricalPower', 'Fan power', 'kW') }}
+            {{ reading('FanFault', 'Fault', binary=true) }}
+        </div>
+        <div class="ahu-stage" role="listitem">
+            <svg viewBox="0 0 80 64" aria-hidden="true"><path class="ahu-duct" d="M0 16H80M0 48H80"/><path class="ahu-cooling" d="M25 12H55V52H25Z"/><path class="ahu-symbol" d="M30 16L50 24L30 32L50 40L30 48"/><path class="ahu-air" d="M3 32H20M60 32H76M70 27L76 32L70 37"/></svg>
+            <h3>Cooling coil</h3>
+            {{ reading('CoolingValve', 'Valve', '%') }}
+        </div>
+        <div class="ahu-stage" role="listitem">
+            <svg viewBox="0 0 80 64" aria-hidden="true"><path class="ahu-duct" d="M0 16H80M0 48H80"/><path class="ahu-heating" d="M25 12H55V52H25Z"/><path class="ahu-symbol" d="M30 16L50 24L30 32L50 40L30 48"/><path class="ahu-air" d="M3 32H20M60 32H76M70 27L76 32L70 37"/></svg>
+            <h3>Heating coil</h3>
+            {{ reading('HeatingValve', 'Valve', '%') }}
+            {{ reading('ReturnWaterTemp', 'Return water', 'C') }}
+            {{ reading('HeatingPumpRunStatus', 'Pump', binary=true) }}
+        </div>
+        <div class="ahu-stage" role="listitem">
+            <svg viewBox="0 0 80 64" aria-hidden="true"><path class="ahu-duct" d="M0 16H80M0 48H80"/><path class="ahu-air" d="M3 32H76M70 27L76 32L70 37"/><path class="ahu-sensor" d="M40 8V28"/><circle class="ahu-fan-case" cx="40" cy="8" r="6"/></svg>
+            <h3>Supply air</h3>
+            {{ reading('SupplyAirTemp', 'Temperature', 'C') }}
+            {{ reading('SupplyAirTempSetpoint', 'Setpoint', 'C') }}
+        </div>
+    </div>
+    <div class="ahu-interlocks">
+        <h3>Interlocks</h3>
+        {{ reading('FireAlarmStatus', 'Fire alarm', binary=true) }}
+        {{ reading('FreezeProtectionAlarm', 'Freeze protection', binary=true) }}
+        {{ reading('ExternalStop', 'External stop', binary=true) }}
+        {{ reading('ServiceSwitch', 'Service switch', binary=true) }}
+    </div>
+</section>

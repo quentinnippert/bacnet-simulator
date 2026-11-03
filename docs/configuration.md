@@ -49,6 +49,7 @@ The default YAML filenames are loaded alphabetically:
 | OAT-01 | 5001 | 47812 |
 | TSTAT-01 | 3001 | 47813 |
 | ZC-01 | 4001 | 47814 |
+| SF-01 | 6001 | 47815 |
 
 **Directed discovery:** send Who-Is to each address; broadcasts do not cross UDP ports.
 
