@@ -1,12 +1,4 @@
-{% macro reading(suffix, label, unit='', binary=false) %}
-{% set point = device.get_point_by_name(device.name ~ '/' ~ suffix) %}
-<div class="ahu-reading">
-    {% if point %}
-    <a href="#point-{{ device.device_id }}-{{ point.object_type.value }}-{{ point.object_instance }}" title="{{ point.object_name }}">{{ label }}</a>
-    <strong>{% if binary %}{{ 'Active' if point.present_value else 'Inactive' }}{% else %}{{ '%g' | format(point.present_value) }}{% endif %}{% if unit %} <small>{{ unit }}</small>{% endif %}</strong>
-    {% else %}<span>{{ label }}</span><strong>Not configured</strong>{% endif %}
-</div>
-{% endmacro %}
+{% from "partials/equipment_macros.html" import reading with context %}
 {% set run = device.get_point_by_name(device.name ~ '/FanRunStatus') %}
 {% set fault = device.get_point_by_name(device.name ~ '/FanFault') %}
 <section class="ahu-equipment" aria-labelledby="ahu-equipment-title">

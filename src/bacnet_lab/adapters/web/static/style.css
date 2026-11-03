@@ -9,6 +9,14 @@
 .ahu-equipment-heading h2 { margin-bottom: 0.2rem; font-size: 1.25rem; }
 .ahu-equipment-heading p { color: #536159; font-size: 0.85rem; margin-bottom: 1rem; }
 .ahu-air-path { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.device-equipment-path { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.device-equipment .ahu-stage { padding: 0.75rem; }
+.device-equipment .ahu-stage svg { height: 96px; }
+.device-equipment .ahu-reading { font-size: 0.85rem; }
+.equipment-fan { background: #f0f7f4; border-top: 3px solid #147d78; }
+.equipment-alarm-symbol { fill: #f3edda; stroke: #96721e; stroke-width: 2; }
+.equipment-alarm-active { background: #fff1ed; border-top: 3px solid #b42318; }
+.equipment-alarm-active .equipment-alarm-symbol { fill: #f5d6cd; stroke: #b42318; }
 .ahu-stage { min-width: 0; padding: 0.4rem; border-right: 1px solid #e0e8e3; }
 .ahu-stage:last-child { border-right: 0; }
 .ahu-stage svg { display: block; width: 100%; height: 80px; }
@@ -42,6 +50,7 @@
     body:has(.ahu-equipment) > nav.container-fluid { flex-wrap: wrap; }
     body:has(.ahu-equipment) > nav.container-fluid ul { flex-wrap: wrap; }
     .ahu-air-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .device-equipment-path { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem 0; }
 }
 @media (prefers-reduced-motion: reduce) {
     .ahu-fan.is-running .ahu-fan-rotor { animation: none; }

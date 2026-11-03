@@ -1,6 +1,6 @@
 # Devices
 
-BACnet Lab simulates 8 HVAC devices with 80 BACnet points. Default devices use separate UDP ports and directed discovery.
+BACnet Lab simulates 7 HVAC devices with 58 BACnet points. Default devices use separate UDP ports and directed discovery. Each default device page includes a live equipment graphic with readings linked to the corresponding BACnet point rows. Graphics refresh with the points table and show last-known values when a device is offline. Command points are labelled as commands, not measured feedback.
 
 ## Device Overview
 
@@ -13,7 +13,6 @@ BACnet Lab simulates 8 HVAC devices with 80 BACnet points. Default devices use s
 | ZC-01 | 4001 | 47814 | 7 | Open Plan Area |
 | OAT-01 | 5001 | 47812 | 2 | Outdoor |
 | CO2-01 | 5002 | 47809 | 3 | Conference Room |
-| SF-01 | 6001 | 47815 | 22 | Supply Ventilation |
 
 ## AHU-01 — Air Handling Unit
 
@@ -109,54 +108,6 @@ The bundled AHU inventory contains only unit-related points shared by the `clean
 | CO2-01/CO2Level | analogInput | CO2 concentration | 450.0 | partsPerMillion |
 | CO2-01/CO2Setpoint | analogValue | CO2 setpoint for demand ventilation | 800.0 | partsPerMillion |
 | CO2-01/HighCO2Alarm | binaryValue | High CO2 alarm | false | — |
-
-## SF-01 - Supply Fan Controller
-
-Device instance **6001**, default UDP port **47815**. The file
-`config/devices/zone_supply_fan_01.yaml` sorts after the existing inventory,
-preserving all seven existing port assignments. Like other default devices, it
-uses the configured BACnet IP and sequential port allocation from `port_start`.
-
-Each row below represents one point, prefixed with `SF-01/Supply`
-(for example, `SF-01/SupplyFanSpeed`). There are no exhaust points.
-
-| Point suffix | Object type | Default | Units |
-|---|---|---|---|
-| FanSpeed | analogOutput | 60 | percent |
-| DamperPosition | analogOutput | 100 | percent |
-| FanEnable | binaryOutput | true | - |
-| FanFaultReset | binaryOutput | false | - |
-| FanSpeedFeedback | analogInput | 60 | percent |
-| Airflow | analogInput | 1200 | cubicFeetPerMinute |
-| DuctPressure | analogInput | 250 | pascals |
-| FanCurrent | analogInput | 4.5 | amperes |
-| FanElectricalPower | analogInput | 2.16 | kilowatts |
-| FanElectricalEnergy | analogInput | 0 | kilowattHours |
-| FanRuntime | analogInput | 0 | hours |
-| FanRunStatus | binaryInput | true | - |
-| FanFault | binaryInput | false | - |
-| AirflowProof | binaryInput | true | - |
-| DamperOpenStatus | binaryInput | true | - |
-| FanLocalOverride | binaryInput | false | - |
-| DuctPressureSetpoint | analogValue | 250 | pascals |
-| AirflowSetpoint | analogValue | 1200 | cubicFeetPerMinute |
-
-Controller-wide points use the `SF-01/` prefix:
-
-| Point | Object type | Default | States |
-|---|---|---|---|
-| Mode | multiStateValue | 2 | 1=Off, 2=SupplyOnly |
-| FireAlarmStatus | binaryInput | false | - |
-| ExternalStop | binaryInput | false | - |
-| ServiceSwitch | binaryInput | false | - |
-
-All points expose the standard simulator BACnet properties, including descriptions,
-status flags and Out_Of_Service. Analog points include units and COV increments;
-commandable outputs/values include priority arrays and relinquish defaults.
-These are independently controllable simulated points, not an automatic fan
-sequence: enable, reset, mode and interlock writes do not drive feedback, alarms,
-energy or runtime. Use HTTP point writes or manual overrides to set simulated
-feedback; native BACnet input writes require Out_Of_Service.
 
 ## Custom devices
 

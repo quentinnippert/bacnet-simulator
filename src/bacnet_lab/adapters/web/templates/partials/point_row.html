@@ -1,4 +1,8 @@
-{% if device.name == 'AHU-01' %}{% include "partials/ahu_equipment.html" %}{% endif %}
+{% if device.name == 'AHU-01' %}
+{% include "partials/ahu_equipment.html" %}
+{% else %}
+{% include "partials/device_equipment.html" %}
+{% endif %}
 <h2>Points</h2>
 <div class="points-table-scroll">
 <table>

@@ -2,7 +2,7 @@
 
 **Open-source BACnet/IP simulator for developers testing BACnet clients, BMS integrations, SCADA connectors and HVAC automation without physical hardware.**
 
-Run **8 virtual HVAC devices and 80 BACnet points** with Python or Docker. Control the simulation through a REST API and web dashboard; test discovery, reads, writes, priorities, Change of Value (COV), device availability and signed webhooks.
+Run **7 virtual HVAC devices and 58 BACnet points** with Python or Docker. Control the simulation through a REST API and web dashboard; test discovery, reads, writes, priorities, Change of Value (COV), device availability and signed webhooks.
 
 [Quick start](#quick-start) · [Devices](#virtual-hvac-devices) · [API reference](docs/api.md) · [BACnet capabilities](docs/bacnet-profile.md)
 
@@ -46,7 +46,7 @@ The bridge override does not provide LAN BACnet broadcast connectivity.
 
 Open the **[dashboard](http://localhost:8080/ui)** or **[interactive API docs](http://localhost:8080/docs)**. Defaults are local-only; `.env` is optional.
 
-> **Connecting a BACnet client:** defaults use `127.0.0.1:47808`–`47815`. Send a directed Who-Is to each address. A broadcast to one port does not discover the other ports. See [LAN and Docker networking](docs/configuration.md#network-topology).
+> **Connecting a BACnet client:** defaults use `127.0.0.1:47808`–`47814`. Send a directed Who-Is to each address. A broadcast to one port does not discover the other ports. See [LAN and Docker networking](docs/configuration.md#network-topology).
 
 ## What you can test
 

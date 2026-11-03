@@ -188,7 +188,7 @@ async def test_health(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["devices_count"] == 8
+    assert data["devices_count"] == 7
 
 
 @pytest.mark.asyncio
@@ -196,7 +196,7 @@ async def test_list_devices(client):
     resp = await client.get("/api/devices")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 8
+    assert len(data) == 7
 
 
 @pytest.mark.asyncio
@@ -315,12 +315,44 @@ async def test_ahu_equipment_refreshes_command_values(client):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("device_id", [2001, 6001])
-async def test_non_ahu_devices_do_not_show_ahu_equipment(client, device_id):
+@pytest.mark.parametrize("device_id", [2001, 2002, 3001, 4001, 5001, 5002])
+async def test_device_equipment_shows_all_points_and_links(client, device_id):
+    device = (await client.get(f"/api/devices/{device_id}")).json()
     for path in (f"/ui/devices/{device_id}", f"/ui/partials/points/{device_id}"):
         response = await client.get(path)
         assert response.status_code == 200
         assert 'aria-labelledby="ahu-equipment-title"' not in response.text
+        assert 'aria-labelledby="device-equipment-title"' in response.text
+        assert "Not configured" not in response.text
+        for point in device["points"]:
+            assert f'title="{point["object_name"]}"' in response.text
+            anchor = f'point-{device_id}-{point["object_type"]}-{point["object_instance"]}'
+            assert f'href="#{anchor}"' in response.text
+            assert f'id="{anchor}"' in response.text
+
+
+@pytest.mark.asyncio
+async def test_equipment_refreshes_mode_and_alarm(client):
+    response = await client.put(
+        "/api/devices/3001/points", json={"point_name": "TSTAT-01/Mode", "value": 2}
+    )
+    assert response.status_code == 200
+    response = await client.get("/ui/partials/points/3001")
+    assert 'Mode</a>\n    <strong>Cool</strong>' in response.text
+
+    response = await client.put(
+        "/api/devices/5002/points", json={"point_name": "CO2-01/HighCO2Alarm", "value": True}
+    )
+    assert response.status_code == 200
+    response = await client.get("/ui/partials/points/5002")
+    assert "equipment-alarm-active" in response.text
+    assert 'Alarm</a>\n    <strong>Active</strong>' in response.text
+
+
+@pytest.mark.asyncio
+async def test_removed_supply_fan_is_not_available(client):
+    for path in ("/api/devices/6001", "/ui/devices/6001"):
+        assert (await client.get(path)).status_code == 404
 
 
 @pytest.mark.asyncio

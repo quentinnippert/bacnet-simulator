@@ -1,0 +1,55 @@
+{% from "partials/equipment_macros.html" import reading, symbol with context %}
+{% if device.name in ('FCU-01', 'FCU-02') %}
+{% set equipment_type = 'Fan coil unit' %}
+{% set groups = [
+    ('Fan', 'fan', [('FanEnable', 'Enable command', '', true), ('FanSpeed', 'Speed command', '%', false)]),
+    ('Cooling coil', 'cooling', [('CoolingValve', 'Valve', '%', false)]),
+    ('Heating coil', 'heating', [('HeatingValve', 'Valve', '%', false)]),
+    ('Room', 'room', [('RoomTemp', 'Temperature', 'C', false), ('RoomTempSetpoint', 'Setpoint', 'C', false), ('OccupancySensor', 'Occupancy', '', true)])
+] %}
+{% elif device.name == 'TSTAT-01' %}
+{% set equipment_type = 'Room thermostat' %}
+{% set groups = [
+    ('Space sensing', 'temperature', [('SpaceTemp', 'Temperature', 'C', false), ('SpaceHumidity', 'Humidity', '%', false), ('Occupancy', 'Occupancy', '', true)]),
+    ('Cooling target', 'cooling', [('CoolingSetpoint', 'Setpoint', 'C', false)]),
+    ('Heating target', 'heating', [('HeatingSetpoint', 'Setpoint', 'C', false)]),
+    ('Operating mode', 'controller', [('Mode', 'Mode', '', false)])
+] %}
+{% elif device.name == 'ZC-01' %}
+{% set equipment_type = 'VAV zone controller' %}
+{% set groups = [
+    ('VAV damper', 'damper', [('DamperPosition', 'Position command', '%', false), ('AirflowRate', 'Airflow', 'cfm', false), ('MinAirflow', 'Minimum airflow', 'cfm', false)]),
+    ('Reheat coil', 'heating', [('ReheatValve', 'Valve', '%', false)]),
+    ('Zone', 'room', [('ZoneTemp', 'Temperature', 'C', false), ('ZoneTempSetpoint', 'Setpoint', 'C', false), ('OccupancySensor', 'Occupancy', '', true)])
+] %}
+{% elif device.name == 'OAT-01' %}
+{% set equipment_type = 'Outdoor air sensor' %}
+{% set groups = [
+    ('Temperature', 'temperature', [('OutdoorTemp', 'Outdoor temperature', 'C', false)]),
+    ('Humidity', 'humidity', [('OutdoorHumidity', 'Relative humidity', '%', false)])
+] %}
+{% elif device.name == 'CO2-01' %}
+{% set equipment_type = 'CO2 sensor' %}
+{% set groups = [
+    ('CO2 concentration', 'gas', [('CO2Level', 'Measured level', 'ppm', false), ('CO2Setpoint', 'Setpoint', 'ppm', false)]),
+    ('High CO2 alarm', 'alarm', [('HighCO2Alarm', 'Alarm', '', true)])
+] %}
+{% endif %}
+{% if groups is defined %}
+<section class="ahu-equipment device-equipment" aria-labelledby="device-equipment-title">
+    <div class="ahu-equipment-heading">
+        <div><h2 id="device-equipment-title">{{ device.name }} equipment</h2><p>{{ equipment_type }}</p></div>
+        <span class="status-badge {{ 'status-online' if device.status.value == 'online' else 'status-offline' }}">{{ 'Live values' if device.status.value == 'online' else 'Last known values' }}</span>
+    </div>
+    <div class="device-equipment-path" role="list" aria-label="{{ equipment_type }} components and readings">
+        {% for heading, kind, readings in groups %}
+        {% set alarm = device.get_point_by_name(device.name ~ '/HighCO2Alarm') if kind == 'alarm' else none %}
+        <div class="ahu-stage equipment-{{ kind }}{% if alarm and alarm.present_value %} equipment-alarm-active{% endif %}" role="listitem">
+            {{ symbol(kind) }}
+            <h3>{{ heading }}</h3>
+            {% for suffix, label, unit, binary in readings %}{{ reading(suffix, label, unit, binary) }}{% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
