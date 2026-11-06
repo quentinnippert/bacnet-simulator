@@ -38,6 +38,11 @@ HTTP/scenarios update the simulated source. [ASHRAE reference](https://bacnet.or
 - Percent range `0..100` is a **simulator policy**, not a universal BACnet rule.
 - Overrides restore only when no later command replaced their slot, including same-value writes. Internal write revisions are not BACnet properties. [Scenario rules](scenarios.md).
 
+Simulator adapters can read point status and inject Out_Of_Service/reliability through
+the device-service/network boundary. Reliability changes participate in status-flag
+COV notifications. This privileged test interface does not make Reliability writable
+over BACnet and does not add native BACnet alarms/events.
+
 ## BACpypes3 compatibility
 
 No dependency fork. These application adaptations must be rechecked before upgrading:

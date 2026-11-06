@@ -110,6 +110,7 @@ uv build
 
 | Guide | Find out how to… |
 |---|---|
+| [Project basics](docs/project-basics.md) | Understand the application, networking, REST API, FastAPI and Docker in plain language |
 | [Getting started](docs/getting-started.md) | Install, explore, upgrade and back up |
 | [Configuration](docs/configuration.md) | Configure LAN discovery, Docker, authentication and storage |
 | [Devices](docs/devices.md) / [Scenarios](docs/scenarios.md) | Customize points and run simulations |

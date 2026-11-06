@@ -64,3 +64,52 @@ async def test_shutdown_attempts_every_device_after_a_failure():
     with pytest.raises(ExceptionGroup):
         await engine.stop_all()
     assert engine.stop_device.await_count == 2
+
+
+async def test_public_status_api_restores_latest_source_and_reports_faults():
+    device = load_all_devices("config/devices")[0]
+    point = device.points[0]
+    obj = build_local_object(point)
+    app = Application.from_object_list(
+        [DeviceObject(objectIdentifier=("device", device.device_id), objectName=device.name), obj]
+    )
+    engine = BACnetEngine()
+    engine._runtimes[device.device_id] = Runtime({point.object_name: obj}, app)
+    try:
+        await engine.set_point_status(
+            device.device_id,
+            point.object_type,
+            point.object_instance,
+            out_of_service=True,
+            reliability="open-loop",
+        )
+        await engine.write_point_value(
+            device.device_id, point.object_type, point.object_instance, 33
+        )
+        status = await engine.read_point_status(
+            device.device_id, point.object_type, point.object_instance
+        )
+        assert status.out_of_service
+        assert status.reliability == "open-loop"
+        assert status.status_flags == (False, True, False, True)
+        assert (
+            await engine.read_point_value(
+                device.device_id, point.object_type, point.object_instance
+            )
+            == point.present_value
+        )
+        await engine.set_point_status(
+            device.device_id,
+            point.object_type,
+            point.object_instance,
+            out_of_service=False,
+            reliability="no-fault-detected",
+        )
+        assert (
+            await engine.read_point_value(
+                device.device_id, point.object_type, point.object_instance
+            )
+            == 33
+        )
+    finally:
+        await engine.stop_all()

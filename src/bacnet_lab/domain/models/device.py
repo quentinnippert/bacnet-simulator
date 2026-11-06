@@ -9,6 +9,15 @@ from bacnet_lab.domain.errors import ValidationError
 from bacnet_lab.domain.value_objects import DeviceAddress, PointValue
 
 
+@dataclass(frozen=True)
+class PointStatus:
+    out_of_service: bool
+    reliability: str
+    status_flags: tuple[bool, ...]
+    priority_array: tuple[PointValue | None, ...] | None = None
+    relinquish_default: PointValue | None = None
+
+
 def _real(value, name: str) -> float:
     """Normalize a numeric property to the finite BACnet Real wire range."""
     if type(value) not in (int, float):

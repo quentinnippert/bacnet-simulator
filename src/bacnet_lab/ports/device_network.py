@@ -3,11 +3,27 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from bacnet_lab.domain.enums import PointType
-from bacnet_lab.domain.models.device import Device
+from bacnet_lab.domain.models.device import Device, PointStatus
 from bacnet_lab.domain.value_objects import PointValue
 
 
 class DeviceNetworkPort(ABC):
+    async def read_point_status(
+        self, device_id: int, object_type: PointType, instance: int
+    ) -> PointStatus:
+        raise NotImplementedError("Point status is not implemented by this adapter")
+
+    async def set_point_status(
+        self,
+        device_id: int,
+        object_type: PointType,
+        instance: int,
+        *,
+        out_of_service: bool | None = None,
+        reliability: str | None = None,
+    ) -> None:
+        raise NotImplementedError("Simulator status control is not implemented by this adapter")
+
     @abstractmethod
     async def start_device(self, device: Device, udp_port: int) -> None: ...
 

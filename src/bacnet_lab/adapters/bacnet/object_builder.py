@@ -28,11 +28,11 @@ class StatusFlagsCOV:
 
 class AnalogCOV(StatusFlagsCOV, COVIncrementCriteria):
     # statusFlags is computed by BACpypes; track its mutable source as well.
-    properties_tracked = COVIncrementCriteria.properties_tracked + ("outOfService",)
+    properties_tracked = COVIncrementCriteria.properties_tracked + ("outOfService", "reliability")
 
 
 class DiscreteCOV(StatusFlagsCOV, GenericCriteria):
-    properties_tracked = GenericCriteria.properties_tracked + ("outOfService",)
+    properties_tracked = GenericCriteria.properties_tracked + ("outOfService", "reliability")
 
 
 class ValidatedObject:

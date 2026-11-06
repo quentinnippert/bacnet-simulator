@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -22,7 +23,11 @@ def create_app(
     *,
     container: Container | None = None,
     settings: AppSettings | None = None,
+    container_factory: Callable[[AppSettings], Awaitable[Container]] | None = None,
+    include_web: bool = True,
 ) -> FastAPI:
+    if container is not None and container_factory is not None:
+        raise ValueError("Pass a container or a container factory, not both")
     settings = settings or (container.settings if container else load_settings())
     auth = (
         AuthSettings(username=auth_username, password=auth_password)
@@ -32,7 +37,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        resources = container or await create_container(settings)
+        resources = container or await (container_factory or create_container)(settings)
         app.state.container = resources
         try:
             await resources.start()
@@ -82,12 +87,13 @@ def create_app(
         events.router,
     ):
         app.include_router(router)
-    from bacnet_lab.adapters.web.router import router as web_router
+    if include_web:
+        from bacnet_lab.adapters.web.router import router as web_router
 
-    app.include_router(web_router)
-    app.mount(
-        "/static",
-        StaticFiles(directory=str(Path(__file__).parent.parent / "web" / "static")),
-        name="static",
-    )
+        app.include_router(web_router)
+        app.mount(
+            "/static",
+            StaticFiles(directory=str(Path(__file__).parent.parent / "web" / "static")),
+            name="static",
+        )
     return app

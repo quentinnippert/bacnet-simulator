@@ -8,7 +8,7 @@ from copy import deepcopy
 from bacnet_lab.domain.enums import DeviceStatus, PointType
 from bacnet_lab.domain.errors import ConflictError, NotFoundError, UnavailableError, ValidationError
 from bacnet_lab.domain.events import DeviceStatusChanged, PointValueChanged
-from bacnet_lab.domain.models.device import Device, Point
+from bacnet_lab.domain.models.device import Device, Point, PointStatus
 from bacnet_lab.domain.value_objects import DeviceAddress, PointValue
 from bacnet_lab.ports.device_network import DeviceNetworkPort
 from bacnet_lab.ports.event_publisher import EventPublisherPort
@@ -139,6 +139,35 @@ class DeviceService:
             await self._network.write_point_value(device_id, object_type, instance, value, priority)
             await self._refresh(device)
             return deepcopy(point)
+
+    async def read_point_status(self, device_id: int, point_name: str) -> PointStatus:
+        point = self.point(device_id, point_name)
+        async with self._locks[device_id]:
+            return await self._network.read_point_status(
+                device_id, point.object_type, point.object_instance
+            )
+
+    async def set_point_status(
+        self,
+        device_id: int,
+        point_name: str,
+        *,
+        out_of_service: bool | None = None,
+        reliability: str | None = None,
+    ) -> PointStatus:
+        point = self.point(device_id, point_name)
+        async with self._locks[device_id]:
+            await self._network.set_point_status(
+                device_id,
+                point.object_type,
+                point.object_instance,
+                out_of_service=out_of_service,
+                reliability=reliability,
+            )
+            await self._refresh(self._device(device_id))
+            return await self._network.read_point_status(
+                device_id, point.object_type, point.object_instance
+            )
 
     async def write_point_by_name(
         self,

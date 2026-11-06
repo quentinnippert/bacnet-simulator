@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from bacnet_lab.adapters.bacnet.device_factory import load_all_devices
@@ -14,6 +15,7 @@ from bacnet_lab.adapters.persistence.sqlite_repos import (
     SqliteEventLogRepository,
 )
 from bacnet_lab.adapters.scenarios.alarm import AlarmScenario
+from bacnet_lab.adapters.scenarios.base import BaseScenario
 from bacnet_lab.adapters.scenarios.cleanroom_ahu import CleanroomAhuScenario
 from bacnet_lab.adapters.scenarios.device_offline import DeviceOfflineScenario
 from bacnet_lab.adapters.scenarios.hvac_day_cycle import HvacDayCycleScenario
@@ -26,6 +28,7 @@ from bacnet_lab.application.endpoint_service import EndpointService
 from bacnet_lab.application.event_service import EventService
 from bacnet_lab.application.scenario_service import ScenarioService
 from bacnet_lab.application.telemetry_service import TelemetryService
+from bacnet_lab.domain.models.device import Device
 from bacnet_lab.infrastructure.config import AppSettings
 
 logger = logging.getLogger(__name__)
@@ -74,13 +77,20 @@ class Container:
             raise ExceptionGroup("Shutdown failed", errors)
 
 
-async def create_container(settings: AppSettings) -> Container:
-    devices = load_all_devices(settings.devices_dir)
+async def create_container(
+    settings: AppSettings,
+    *,
+    devices: list[Device] | None = None,
+    engine: BACnetEngine | None = None,
+    scenario_factories: Sequence[Callable[[DeviceService, InProcessEventPublisher], BaseScenario]]
+    | None = None,
+) -> Container:
+    devices = load_all_devices(settings.devices_dir) if devices is None else devices
     # Run DB migrations
     await run_migrations(settings.db_path)
 
     # Adapters
-    engine = BACnetEngine(ip=settings.bacnet.ip, prefix=settings.bacnet.prefix)
+    engine = engine or BACnetEngine(ip=settings.bacnet.ip, prefix=settings.bacnet.prefix)
     event_publisher = InProcessEventPublisher()
     webhook_delivery = WebhookDeliveryAdapter(allowed_hosts=settings.webhook_allowed_hosts)
 
@@ -101,12 +111,17 @@ async def create_container(settings: AppSettings) -> Container:
 
     # Scenarios
     scenario_registry = ScenarioRegistry()
-    scenario_registry.register(HvacDayCycleScenario(device_service, event_publisher))
-    scenario_registry.register(CleanroomAhuScenario(device_service, event_publisher))
-    scenario_registry.register(SealAhuScenario(device_service, event_publisher))
-    scenario_registry.register(AlarmScenario(device_service, event_publisher))
-    scenario_registry.register(DeviceOfflineScenario(device_service, event_publisher))
-    scenario_registry.register(ManualOverrideScenario(device_service, event_publisher))
+    if scenario_factories is None:
+        scenario_factories = (
+            HvacDayCycleScenario,
+            CleanroomAhuScenario,
+            SealAhuScenario,
+            AlarmScenario,
+            DeviceOfflineScenario,
+            ManualOverrideScenario,
+        )
+    for factory in scenario_factories:
+        scenario_registry.register(factory(device_service, event_publisher))
 
     scenario_service = ScenarioService(runner=scenario_registry)
 

@@ -15,8 +15,8 @@ from bacnet_lab.adapters.bacnet.profile import (
     SimulatorNetworkPortObject,
 )
 from bacnet_lab.domain.enums import PointType
-from bacnet_lab.domain.errors import NotFoundError, UnavailableError
-from bacnet_lab.domain.models.device import Device
+from bacnet_lab.domain.errors import NotFoundError, UnavailableError, ValidationError
+from bacnet_lab.domain.models.device import Device, PointStatus
 from bacnet_lab.domain.value_objects import DeviceAddress, PointValue
 from bacnet_lab.ports.device_network import DeviceNetworkPort
 
@@ -35,9 +35,18 @@ class BACnetEngine(DeviceNetworkPort):
     Keep that compatibility code here and cover it with network lifecycle tests.
     """
 
-    def __init__(self, ip: str = "127.0.0.1", prefix: int = 32) -> None:
+    def __init__(
+        self,
+        ip: str = "127.0.0.1",
+        prefix: int = 32,
+        *,
+        model_name: str = "HVAC simulator",
+        vendor_name: str = "BACnet Lab",
+    ) -> None:
         self._ip = ip
         self._prefix = prefix
+        self._model_name = model_name
+        self._vendor_name = vendor_name
         self._runtimes: dict[int, Runtime] = {}
 
     async def start_device(self, device: Device, udp_port: int) -> None:
@@ -58,8 +67,8 @@ class BACnetEngine(DeviceNetworkPort):
                     objectIdentifier=("device", device.device_id),
                     objectName=device.name,
                     vendorIdentifier=999,
-                    vendorName="BACnet Lab",
-                    modelName="HVAC simulator",
+                    vendorName=self._vendor_name,
+                    modelName=self._model_name,
                     description=device.description,
                 ),
             ]
@@ -194,3 +203,56 @@ class BACnetEngine(DeviceNetworkPort):
         else:
             value = float(value)
         return value, obj._sensor_revision
+
+    async def read_point_status(
+        self, device_id: int, object_type: PointType, instance: int
+    ) -> PointStatus:
+        obj = self._object(device_id, object_type, instance)
+        priorities = None
+        default = None
+        if obj._point.commandable:
+            priorities = tuple(
+                [
+                    await self.read_priority_value(device_id, object_type, instance, slot)
+                    for slot in range(1, 17)
+                ]
+            )
+            raw = obj.relinquishDefault
+            default = (
+                bool(int(raw))
+                if object_type.value.startswith("binary")
+                else int(raw)
+                if object_type.value.startswith("multiState")
+                else float(raw)
+            )
+        return PointStatus(
+            out_of_service=bool(obj.outOfService),
+            reliability=str(obj.reliability),
+            status_flags=tuple(bool(flag) for flag in obj.statusFlags),
+            priority_array=priorities,
+            relinquish_default=default,
+        )
+
+    async def set_point_status(
+        self,
+        device_id: int,
+        object_type: PointType,
+        instance: int,
+        *,
+        out_of_service: bool | None = None,
+        reliability: str | None = None,
+    ) -> None:
+        obj = self._object(device_id, object_type, instance)
+        if out_of_service is not None and type(out_of_service) is not bool:
+            raise ValidationError("Out of service requires a boolean")
+        if reliability is not None and reliability not in {
+            "no-fault-detected",
+            "open-loop",
+            "shorted-loop",
+            "unreliable-other",
+        }:
+            raise ValidationError("Unsupported simulator reliability")
+        if out_of_service is not None:
+            await obj.write_property("outOfService", out_of_service)
+        if reliability is not None:
+            obj.reliability = reliability
